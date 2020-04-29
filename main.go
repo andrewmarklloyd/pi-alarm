@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
+	// "os/signal"
 	"io/ioutil"
-	"syscall"
+	// "syscall"
 	"net/http"
 	"text/template"
 	"github.com/robfig/cron/v3"
@@ -30,43 +30,43 @@ type HomePageData struct {
 var cfg config
 var testmode = false
 var cronLib *cron.Cron
-var status rpio.State
+// var status rpio.State
 
 func main() {
-	pinNumber := 18
-	pin := rpio.Pin(pinNumber)
+	// pinNumber := 18
+	// pin := rpio.Pin(pinNumber)
+	//
+	// err := rpio.Open()
+	// if err != nil {
+	// 	fmt.Println("unable to open gpio", err.Error())
+	// 	fmt.Println("running in test mode")
+	// 	testmode = true
+	// }
+	//
+	// if !testmode {
+	// 	pin.Input()
+	// 	pin.Pull(rpio.PullUp)
+	// }
 
-	err := rpio.Open()
-	if err != nil {
-		fmt.Println("unable to open gpio", err.Error())
-		fmt.Println("running in test mode")
-		testmode = true
-	}
+	// cronLib = cron.New()
+	// cronLib.AddFunc("@every 0h0m1s", func() {
+	// 	if !testmode {
+	// 		status = pin.Read()
+	// 	} else {
+	// 		status = 1
+	// 	}
+	// 	fmt.Println("status:", status)
+	// })
+	// cronLib.Start()
 
-	if !testmode {
-		pin.Input()
-		pin.Pull(rpio.PullUp)
-	}
-
-	cronLib = cron.New()
-	cronLib.AddFunc("@every 0h0m1s", func() {
-		if !testmode {
-			status = pin.Read()
-		} else {
-			status = 1
-		}
-		// fmt.Println("status:", status)
-	})
-	cronLib.Start()
-
-	fmt.Println("creating channel")
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		cleanup(pin, 18)
-		os.Exit(1)
-	}()
+	// fmt.Println("creating channel")
+	// c := make(chan os.Signal)
+	// signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	// go func() {
+	// 	<-c
+	// 	cleanup(pin, 18)
+	// 	os.Exit(1)
+	// }()
 
 	version, err := ioutil.ReadFile("static/version")
 	if err != nil {
@@ -101,7 +101,7 @@ func main() {
 		}
 	})
 	socket.Init()
-	http.ListenAndServe("0.0.0.0:8080", nil)
+	// http.ListenAndServe("0.0.0.0:8080", nil)
 }
 
 func cleanup(pin rpio.Pin, pinNumber int) {

@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/robfig/cron/v3"
-	"github.com/yryz/ds18b20"
+	"github.com/stianeikeland/go-rpio"
 )
 
+var testmode = false
 var upgrader = websocket.Upgrader{}
 var sensor string
+var pin rpio.Pin
+var pinNumber int
 
 const (
 	// Time allowed to write a message to the peer.
@@ -42,8 +46,8 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 
 	cronLib := cron.New()
 	cronLib.AddFunc("@every 1s", func() {
-
-		ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%f", currentTemp())))
+		status := currentStatus()
+		ws.WriteMessage(websocket.TextMessage, []byte(status))
 	})
 	cronLib.Start()
 
@@ -61,20 +65,28 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 
 func Init() {
 	fmt.Println("setting up websockets")
-	sensors, err := ds18b20.Sensors()
+	pinNumber := 18
+	pin = rpio.Pin(pinNumber)
+
+	err := rpio.Open()
 	if err != nil {
-		fmt.Println("Error setting up sensors:", err)
-	} else {
-		sensor = sensors[0]
-		currentTemp()
+		fmt.Println("unable to open gpio", err.Error())
+		fmt.Println("running in test mode")
+		testmode = true
+	}
+
+	if !testmode {
+		pin.Input()
+		pin.Pull(rpio.PullUp)
 	}
 
 	http.HandleFunc("/ws", serveWs)
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
 }
 
-func currentTemp() float64 {
-	celcius, _ := ds18b20.Temperature(sensor)
-	temp := (celcius * (9 / 5)) + 32
-	return temp
+func currentStatus() string {
+	if !testmode {
+		return strconv.Itoa(int(pin.Read()))
+	}
+	return strconv.Itoa(1)
 }
