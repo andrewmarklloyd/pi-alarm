@@ -1,0 +1,4 @@
+server:
+  pin: 18
+  debug: false
+  autoUpdate: false
