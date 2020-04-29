@@ -61,10 +61,18 @@ window.addEventListener("load", function(evt) {
     }
 
     ws.onmessage = function(evt) {
-      x = document.getElementById("temp")
-      console.log(evt.data)
-      x.innerHTML = evt.data
-      x.style.color = "red"
+      x = document.getElementById("alarm")
+      // x.innerHTML = evt.data
+      if (evt.data == 0) {
+        console.log("green")
+        x.innerHTML = "<h1>Door is CLOSED</h1>"
+        x.style.color = "green"
+      } else {
+        console.log("red")
+        x.innerHTML = "<h1>Door is OPEN</h1>"
+        x.style.color = "red"
+      }
+
       // console.log("RESPONSE: " + evt.data);
     }
 

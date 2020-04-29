@@ -88,5 +88,5 @@ func currentStatus() string {
 	if !testmode {
 		return strconv.Itoa(int(pin.Read()))
 	}
-	return strconv.Itoa(1)
+	return strconv.Itoa(0)
 }
