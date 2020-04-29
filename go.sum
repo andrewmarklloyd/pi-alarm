@@ -1,3 +1,4 @@
+github.com/andrewmarklloyd/pi-alarm v0.0.0-20200429030630-5ff4271e08a3 h1:ca7D6b3Zm2IY2pXQlxj2lSFW42H1gtk3o+oKlCdonn4=
 github.com/robfig/cron/v3 v3.0.0 h1:kQ6Cb7aHOHTSzNVNEhmp8EcWKLb4CbiMW9h9VyIhO4E=
 github.com/robfig/cron/v3 v3.0.0/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
 github.com/stianeikeland/go-rpio v4.2.0+incompatible h1:CUOlIxdJdT+H1obJPsmg8byu7jMSECLfAN9zynm5QGo=
