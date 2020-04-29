@@ -1,4 +1,4 @@
-module github.com/alloydsbux/pi-lights
+module github.com/andrewmarklloyd/pi-alarm
 
 go 1.13
 
