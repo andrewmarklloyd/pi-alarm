@@ -42,9 +42,11 @@ func main() {
 	const address = "0.0.0.0:8080"
 
 	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
+	var pin int
 	pin, err := strconv.Atoi(os.Getenv("GPIO_PIN"))
   if err != nil {
     log.Printf("Failed to parse GPIO_PIN env var, using default %d", defaultPin)
+		pin = defaultPin
   }
 	config := &Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
@@ -210,6 +212,7 @@ func cleanup(pinNumber int) {
 
 func currentStatus() string {
 	if !testmode {
+		log.Println("pin read:", pin.Read())
 		return strconv.Itoa(int(pin.Read()))
 	}
 	return strconv.Itoa(0)
