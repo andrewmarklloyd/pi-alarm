@@ -54,10 +54,13 @@ window.addEventListener("load", function(evt) {
         setTimeout(() => {
           ws.send("hello");
         }, 1000)
+        setInterval(() => {
+          ws.send(JSON.stringify({ event: "ping" }))
+        }, 1000);
     }
     ws.onclose = function(evt) {
         console.log("CLOSE");
-        ws = null;
+        // ws = null;
     }
 
     ws.onmessage = function(evt) {

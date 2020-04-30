@@ -2,3 +2,4 @@ pi-alarm
 config.yml
 version
 latestVersion
+.env

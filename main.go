@@ -2,117 +2,215 @@ package main
 
 import (
 	"fmt"
-	"os"
-	// "os/signal"
 	"io/ioutil"
-	// "syscall"
+	"log"
 	"net/http"
-	"text/template"
-	"github.com/robfig/cron/v3"
+	"strconv"
+	"os"
+	"os/signal"
+	"syscall"
 	"github.com/stianeikeland/go-rpio"
-	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/socket"
+	"github.com/dghubble/gologin/v2"
+	"github.com/dghubble/gologin/v2/google"
+	"github.com/dghubble/sessions"
+	"golang.org/x/oauth2"
+	googleOAuth2 "golang.org/x/oauth2/google"
 )
 
-type config struct {
-	Server struct {
-		Pin        int    `yaml:"pin"`
-		Debug      bool   `yaml:"debug"`
-		AutoUpdate bool   `yaml:"autoUpdate`
-	} `yaml:"server"`
-}
+const (
+	sessionName    = "pi-alarm"
+	sessionSecret  = "example cookie signing secret"
+	sessionUserKey = "googleID"
+	defaultPin     = 18
+)
 
-type HomePageData struct {
-	Version       string
-	LatestVersion string
-	Debug         bool
-}
+// sessionStore encodes and decodes session data stored in signed cookies
+var sessionStore = sessions.NewCookieStore([]byte(sessionSecret), nil)
 
-var cfg config
 var testmode = false
-var cronLib *cron.Cron
-// var status rpio.State
+var pin rpio.Pin
+
+type Config struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+	Pin          int
+	Debug        bool
+}
 
 func main() {
-	// pinNumber := 18
-	// pin := rpio.Pin(pinNumber)
-	//
-	// err := rpio.Open()
-	// if err != nil {
-	// 	fmt.Println("unable to open gpio", err.Error())
-	// 	fmt.Println("running in test mode")
-	// 	testmode = true
-	// }
-	//
-	// if !testmode {
-	// 	pin.Input()
-	// 	pin.Pull(rpio.PullUp)
-	// }
+	const address = "0.0.0.0:8080"
 
-	// cronLib = cron.New()
-	// cronLib.AddFunc("@every 0h0m1s", func() {
-	// 	if !testmode {
-	// 		status = pin.Read()
-	// 	} else {
-	// 		status = 1
-	// 	}
-	// 	fmt.Println("status:", status)
-	// })
-	// cronLib.Start()
-
-	// fmt.Println("creating channel")
-	// c := make(chan os.Signal)
-	// signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	// go func() {
-	// 	<-c
-	// 	cleanup(pin, 18)
-	// 	os.Exit(1)
-	// }()
-
-	version, err := ioutil.ReadFile("static/version")
-	if err != nil {
-		fmt.Println("unable to open version", err)
-		os.Exit(1)
+	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
+	pin, err := strconv.Atoi(os.Getenv("GPIO_PIN"))
+  if err != nil {
+    log.Printf("Failed to parse GPIO_PIN env var, using default %d", defaultPin)
+  }
+	config := &Config{
+		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		RedirectURL:  os.Getenv("REDIRECT_URL"),
+		Pin:          pin,
+		Debug:        debug,
 	}
 
-	fmt.Println("Setting up http handlers")
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path[1:]
+	if config.ClientID == "" {
+		log.Fatal("Missing Google Client ID")
+	}
+	if config.ClientSecret == "" {
+		log.Fatal("Missing Google Client Secret")
+	}
+	if config.RedirectURL == "" {
+		log.Fatal("Missing Google Redirect URL")
+	}
 
-		if path == "" {
-			latestVersion, err := ioutil.ReadFile("static/latestVersion")
-			if err != nil || len(latestVersion) == 0 {
-				latestVersion = version
-			}
-			tmpl := template.Must(template.ParseFiles("./static/index.html"))
-			data := HomePageData{
-				Version:       string(version),
-				LatestVersion: string(latestVersion),
-				Debug:         cfg.Server.Debug,
-			}
-			tmpl.Execute(w, data)
-		} else {
-			if fileExists(path) {
-				d, _ := ioutil.ReadFile(string(path))
-				w.Write(d)
-			} else {
-				// fmt.Println(path)
-				http.NotFound(w, r)
-			}
-		}
-	})
-	socket.Init()
-	// http.ListenAndServe("0.0.0.0:8080", nil)
+	setupGPIO(config.Pin)
+
+	log.Println("Creating channel to cleanup GPIO pins")
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		cleanup(config.Pin)
+		os.Exit(1)
+	}()
+
+	log.Printf("Starting Server listening on %s\n", address)
+	err = http.ListenAndServe(address, New(config))
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
-func cleanup(pin rpio.Pin, pinNumber int) {
+
+// New returns a new ServeMux with app routes.
+func New(config *Config) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", welcomeHandler)
+	mux.Handle("/status", requireLogin(http.HandlerFunc(statusHandler)))
+	mux.Handle("/static/bootstrap.css", requireLogin(http.HandlerFunc(bootstrapHandler)))
+	mux.Handle("/static/app.js", requireLogin(http.HandlerFunc(appHandler)))
+	mux.Handle("/static/jquery.js", requireLogin(http.HandlerFunc(jqueryHandler)))
+	mux.HandleFunc("/logout", logoutHandler)
+	// 1. Register Login and Callback handlers
+	oauth2Config := &oauth2.Config{
+		ClientID:     config.ClientID,
+		ClientSecret: config.ClientSecret,
+		RedirectURL:  config.RedirectURL,
+		Endpoint:     googleOAuth2.Endpoint,
+		Scopes:       []string{"profile", "email"},
+	}
+	// state param cookies require HTTPS by default; disable for localhost development
+	stateConfig := gologin.DebugOnlyCookieConfig
+	mux.Handle("/google/login", google.StateHandler(stateConfig, google.LoginHandler(oauth2Config, nil)))
+	mux.Handle("/google/callback", google.StateHandler(stateConfig, google.CallbackHandler(oauth2Config, issueSession(), nil)))
+	return mux
+}
+
+// issueSession issues a cookie session after successful Google login
+func issueSession() http.Handler {
+	fn := func(w http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+		googleUser, err := google.UserFromContext(ctx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// 2. Implement a success handler to issue some form of session
+		session := sessionStore.New(sessionName)
+		session.Values[sessionUserKey] = googleUser.Id
+		session.Save(w)
+		http.Redirect(w, req, "/status", http.StatusFound)
+	}
+	return http.HandlerFunc(fn)
+}
+
+// welcomeHandler shows a welcome message and login button.
+func welcomeHandler(w http.ResponseWriter, req *http.Request) {
+	if req.URL.Path != "/" {
+		http.NotFound(w, req)
+		return
+	}
+	if isAuthenticated(req) {
+		http.Redirect(w, req, "/status", http.StatusFound)
+		return
+	}
+
+	page, _ := ioutil.ReadFile("./static/index.html")
+	fmt.Fprintf(w, string(page))
+}
+
+func bootstrapHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/css")
+	page, _ := ioutil.ReadFile("./static/bootstrap.css")
+	fmt.Fprintf(w, string(page))
+}
+func appHandler(w http.ResponseWriter, req *http.Request) {
+	page, _ := ioutil.ReadFile("./static/app.js")
+	fmt.Fprintf(w, string(page))
+}
+func jqueryHandler(w http.ResponseWriter, req *http.Request) {
+	page, _ := ioutil.ReadFile("./static/jquery.js")
+	fmt.Fprintf(w, string(page))
+}
+
+// statusHandler shows protected user content.
+func statusHandler(w http.ResponseWriter, req *http.Request) {
+	message := fmt.Sprintf(`<p>Status: %s</p><form action="/logout" method="post"><input type="submit" value="Logout"></form>`, currentStatus())
+	fmt.Fprint(w, message)
+}
+
+// logoutHandler destroys the session on POSTs and redirects to home.
+func logoutHandler(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		sessionStore.Destroy(w, sessionName)
+	}
+	http.Redirect(w, req, "/", http.StatusFound)
+}
+
+// requireLogin redirects unauthenticated users to the login route.
+func requireLogin(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, req *http.Request) {
+		if !isAuthenticated(req) {
+			http.Redirect(w, req, "/", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, req)
+	}
+	return http.HandlerFunc(fn)
+}
+
+// isAuthenticated returns true if the user has a signed session cookie.
+func isAuthenticated(req *http.Request) bool {
+	if _, err := sessionStore.Get(req, sessionName); err == nil {
+		return true
+	}
+	return false
+}
+
+func setupGPIO(pinNumber int) {
+	pin = rpio.Pin(pinNumber)
+
+	err := rpio.Open()
+	if err != nil {
+		log.Println(fmt.Sprintf("Unable to open gpio: %s, continuing but running in test mode.", err.Error()))
+		testmode = true
+	}
+
+	if !testmode {
+		pin.Input()
+		pin.Pull(rpio.PullUp)
+	}
+}
+
+func cleanup(pinNumber int) {
 	fmt.Println("Cleaning up pin", pinNumber)
 	rpio.Close()
 }
 
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
+func currentStatus() string {
+	if !testmode {
+		return strconv.Itoa(int(pin.Read()))
 	}
-	return !info.IsDir()
+	return strconv.Itoa(0)
 }
