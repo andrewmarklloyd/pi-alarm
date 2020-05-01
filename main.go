@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"strings"
 	"text/template"
+	"math/rand"
 
 	"github.com/stianeikeland/go-rpio"
 	"github.com/dghubble/gologin/v2"
@@ -28,6 +29,9 @@ const (
 	defaultPin     = 18
 	PUBLIC_DIR     = "/public/"
 	PRIVATE_DIR    = "/private/"
+	OPEN           = "OPEN"
+	CLOSED         = "CLOSED"
+	UNKNOWN        = "UNKNOWN"
 )
 
 // sessionStore encodes and decodes session data stored in signed cookies
@@ -221,8 +225,17 @@ func cleanup(pinNumber int) {
 }
 
 func currentStatus() string {
-	if !testmode {
-		return strconv.Itoa(int(pin.Read()))
+	var pinState int
+	if testmode {
+		pinState = rand.Intn(2)
+	} else {
+		pinState = int(pin.Read())
 	}
-	return strconv.Itoa(0)
+
+	if pinState == 0 {
+		return CLOSED
+	} else if pinState == 1 {
+		return OPEN
+	}
+	return UNKNOWN
 }
