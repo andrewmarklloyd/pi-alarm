@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"strings"
 	"github.com/stianeikeland/go-rpio"
 	"github.com/dghubble/gologin/v2"
 	"github.com/dghubble/gologin/v2/google"
@@ -31,13 +32,15 @@ var sessionStore = sessions.NewCookieStore([]byte(sessionSecret), nil)
 
 var testmode = false
 var pin rpio.Pin
+var config *Config
 
 type Config struct {
-	ClientID     string
-	ClientSecret string
-	RedirectURL  string
-	Pin          int
-	Debug        bool
+	ClientID        string
+	ClientSecret    string
+	RedirectURL     string
+	AuthorizedUsers string
+	Pin             int
+	Debug           bool
 }
 
 func main() {
@@ -50,12 +53,13 @@ func main() {
     log.Printf("Failed to parse GPIO_PIN env var, using default %d", defaultPin)
 		pin = defaultPin
   }
-	config := &Config{
-		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  os.Getenv("REDIRECT_URL"),
-		Pin:          pin,
-		Debug:        debug,
+	config = &Config{
+		ClientID:        os.Getenv("GOOGLE_CLIENT_ID"),
+		ClientSecret:    os.Getenv("GOOGLE_CLIENT_SECRET"),
+		RedirectURL:     os.Getenv("REDIRECT_URL"),
+		AuthorizedUsers: os.Getenv("AUTHORIZED_USERS"),
+		Pin:             pin,
+		Debug:           debug,
 	}
 
 	if config.ClientID == "" {
@@ -66,6 +70,9 @@ func main() {
 	}
 	if config.RedirectURL == "" {
 		log.Fatal("Missing Google Redirect URL")
+	}
+	if config.AuthorizedUsers == "" {
+		log.Fatal("Missing Authorized Users")
 	}
 
 	setupGPIO(config.Pin)
@@ -119,6 +126,10 @@ func issueSession() http.Handler {
 		googleUser, err := google.UserFromContext(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if !strings.Contains(config.AuthorizedUsers, googleUser.Email) {
+			http.Redirect(w, req, "/static/error.html", http.StatusFound)
 			return
 		}
 		// 2. Implement a success handler to issue some form of session
