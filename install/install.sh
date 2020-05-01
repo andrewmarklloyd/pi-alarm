@@ -14,16 +14,18 @@ binaryUrl=$(curl -s https://api.github.com/repos/andrewmarklloyd/pi-alarm/releas
 curl -sL $binaryUrl -o ${archive_path}/pi-alarm
 chmod +x ${archive_path}/pi-alarm
 rm -f ${install_dir}/install/*
-rm -f ${install_dir}/static/*
+rm -f ${install_dir}/public/*
+rm -f ${install_dir}/private/*
 
 mkdir -p ${install_dir}/install/
-mkdir -p ${install_dir}/static/
+mkdir -p ${install_dir}/public/
+mkdir -p ${install_dir}/private/
 cp ${archive_path}/install/* ${install_dir}/install/
-cp ${archive_path}/static/* ${install_dir}/static/
-mv ${archive_path}/default.config.yml ${install_dir}/config.yml
+cp ${archive_path}/public/* ${install_dir}/public/
+cp ${archive_path}/private/* ${install_dir}/private/
 
-echo -n ${latestVersion} > ${install_dir}/static/version
-echo -n ${latestVersion} > ${install_dir}/static/latestVersion
+echo -n ${latestVersion} > ${install_dir}/public/version
+echo -n ${latestVersion} > ${install_dir}/public/latestVersion
 mv ${archive_path}/pi-alarm ${install_dir}/
 sudo mv ${archive_path}/install/pi-alarm.service /etc/systemd/system/
 rm -rf ${archive_path}
