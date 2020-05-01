@@ -5,17 +5,19 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	gmux "github.com/gorilla/mux"
 	"strconv"
 	"os"
 	"os/signal"
 	"syscall"
 	"strings"
+	"text/template"
+
 	"github.com/stianeikeland/go-rpio"
 	"github.com/dghubble/gologin/v2"
 	"github.com/dghubble/gologin/v2/google"
 	"github.com/dghubble/sessions"
 	"golang.org/x/oauth2"
+	gmux "github.com/gorilla/mux"
 	googleOAuth2 "golang.org/x/oauth2/google"
 )
 
@@ -24,7 +26,8 @@ const (
 	sessionSecret  = "example cookie signing secret"
 	sessionUserKey = "googleID"
 	defaultPin     = 18
-	STATIC_DIR     = "/static/"
+	PUBLIC_DIR     = "/public/"
+	PRIVATE_DIR    = "/private/"
 )
 
 // sessionStore encodes and decodes session data stored in signed cookies
@@ -41,6 +44,10 @@ type Config struct {
 	AuthorizedUsers string
 	Pin             int
 	Debug           bool
+}
+
+type StatusPageData struct {
+	Status string
 }
 
 func main() {
@@ -98,8 +105,8 @@ func main() {
 func New(config *Config) *gmux.Router {
 	router := gmux.NewRouter().StrictSlash(true)
 	router.
-    PathPrefix(STATIC_DIR).
-    Handler(http.StripPrefix(STATIC_DIR, http.FileServer(http.Dir("."+STATIC_DIR))))
+    PathPrefix(PUBLIC_DIR).
+    Handler(http.StripPrefix(PUBLIC_DIR, http.FileServer(http.Dir("."+PUBLIC_DIR))))
 
 	router.HandleFunc("/", welcomeHandler)
 	router.Handle("/status", requireLogin(http.HandlerFunc(statusHandler)))
@@ -129,7 +136,7 @@ func issueSession() http.Handler {
 			return
 		}
 		if !strings.Contains(config.AuthorizedUsers, googleUser.Email) {
-			http.Redirect(w, req, "/static/error.html", http.StatusFound)
+			http.Redirect(w, req, fmt.Sprint("%serror.html", PUBLIC_DIR), http.StatusFound)
 			return
 		}
 		// 2. Implement a success handler to issue some form of session
@@ -152,14 +159,17 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	page, _ := ioutil.ReadFile("./static/index.html")
+	page, _ := ioutil.ReadFile(fmt.Sprintf(".%sindex.html", PUBLIC_DIR))
 	fmt.Fprintf(w, string(page))
 }
 
 // statusHandler shows protected user content.
 func statusHandler(w http.ResponseWriter, req *http.Request) {
-	message := fmt.Sprintf(`<p>Status: %s</p><form action="/logout" method="post"><input type="submit" value="Logout"></form>`, currentStatus())
-	fmt.Fprint(w, message)
+	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
+	data := StatusPageData{
+		Status: currentStatus(),
+	}
+	tmpl.Execute(w, data)
 }
 
 // logoutHandler destroys the session on POSTs and redirects to home.

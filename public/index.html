@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Pi Alarm</title>
+    <link rel="stylesheet" href="/public/bootstrap.css">
+  </head>
+  <body class="bg-dark">
+    <div class="container">
+      <div class="row mt-1">
+        <div class="col-lg mt-1">
+          <h1 id="title" class="display-1 text-center text-light"><b>Pi Alarm</b></h1>
+          <h4 id="subtitle" class="display-4 text-center text-light"></h4>
+        </div>
+      </div>
+      <a href="/google/login" class="button">Login with Google</a>
+      <div id="dots" class="text-center text-light display-1">
+      </div>
+      <div id="app">
+        <div class="row mt-4" id="alarm">
+
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript" src="/public/app.js"></script>
+    <script type="text/javascript" src="/public/jquery.js"></script>
+    <iframe style="display: none;" name="formDestination"></iframe>
+  </body>
+</html>
