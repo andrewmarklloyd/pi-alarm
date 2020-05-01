@@ -212,7 +212,6 @@ func cleanup(pinNumber int) {
 
 func currentStatus() string {
 	if !testmode {
-		log.Println("pin read:", pin.Read())
 		return strconv.Itoa(int(pin.Read()))
 	}
 	return strconv.Itoa(0)
