@@ -1,5 +1,31 @@
 #!/bin/bash
 
+configure_app() {
+  echo "Enter the GOOGLE_CLIENT_ID:"
+  read -s GOOGLE_CLIENT_ID
+  echo "Enter the GOOGLE_CLIENT_SECRET:"
+  read -s GOOGLE_CLIENT_SECRET
+  echo "Enter the REDIRECT_URL:"
+  read -s REDIRECT_URL
+  echo "Enter the AUTHORIZED_USERS as a comma separated list:"
+  read -s AUTHORIZED_USERS
+
+  sed "s/{{.GOOGLE_CLIENT_ID}}/${GOOGLE_CLIENT_ID}/" ${archive_path}/install/pi-alarm.service.tmpl \
+       | sed "s/{{.GOOGLE_CLIENT_SECRET}}/${GOOGLE_CLIENT_SECRET}/" \
+       | sed "s/{{.REDIRECT_URL}}/${REDIRECT_URL}/" \
+       | sed "s/{{.AUTHORIZED_USERS}}/${AUTHORIZED_USERS}/" > ${archive_path}/install/pi-alarm.service
+
+  sudo mv ${archive_path}/install/pi-alarm.service /etc/systemd/system/
+  rm ${archive_path}/install/pi-alarm.service.tmpl
+}
+
+install_pagekite() {
+  curl -O https://pagekite.net/pk/pagekite.py
+  chmod +x pagekite.py
+  mv pagekite.py /usr/local/bin/pagekite.py
+  echo "TODO: pagekite.py --add"
+}
+
 sudo apt-get update
 sudo apt-get install jq -y
 
@@ -27,8 +53,16 @@ cp ${archive_path}/private/* ${install_dir}/private/
 echo -n ${latestVersion} > ${install_dir}/public/version
 echo -n ${latestVersion} > ${install_dir}/public/latestVersion
 mv ${archive_path}/pi-alarm ${install_dir}/
-sudo mv ${archive_path}/install/pi-alarm.service /etc/systemd/system/
+configure_app
 rm -rf ${archive_path}
 
 sudo systemctl enable pi-alarm.service
 sudo systemctl start pi-alarm.service
+
+echo "Install pagekite? y/n"
+read answer
+if [[ ${answer} == "y" ]]; then
+  install_pagekite
+fi
+
+echo "Installation complete"
