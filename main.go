@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	gmux "github.com/gorilla/mux"
 	"strconv"
 	"os"
 	"os/signal"
@@ -22,6 +23,7 @@ const (
 	sessionSecret  = "example cookie signing secret"
 	sessionUserKey = "googleID"
 	defaultPin     = 18
+	STATIC_DIR     = "/static/"
 )
 
 // sessionStore encodes and decodes session data stored in signed cookies
@@ -78,22 +80,23 @@ func main() {
 	}()
 
 	log.Printf("Starting Server listening on %s\n", address)
+
 	err = http.ListenAndServe(address, New(config))
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
 
-
 // New returns a new ServeMux with app routes.
-func New(config *Config) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", welcomeHandler)
-	mux.Handle("/status", requireLogin(http.HandlerFunc(statusHandler)))
-	mux.Handle("/static/bootstrap.css", requireLogin(http.HandlerFunc(bootstrapHandler)))
-	mux.Handle("/static/app.js", requireLogin(http.HandlerFunc(appHandler)))
-	mux.Handle("/static/jquery.js", requireLogin(http.HandlerFunc(jqueryHandler)))
-	mux.HandleFunc("/logout", logoutHandler)
+func New(config *Config) *gmux.Router {
+	router := gmux.NewRouter().StrictSlash(true)
+	router.
+    PathPrefix(STATIC_DIR).
+    Handler(http.StripPrefix(STATIC_DIR, http.FileServer(http.Dir("."+STATIC_DIR))))
+
+	router.HandleFunc("/", welcomeHandler)
+	router.Handle("/status", requireLogin(http.HandlerFunc(statusHandler)))
+	router.HandleFunc("/logout", logoutHandler)
 	// 1. Register Login and Callback handlers
 	oauth2Config := &oauth2.Config{
 		ClientID:     config.ClientID,
@@ -104,9 +107,9 @@ func New(config *Config) *http.ServeMux {
 	}
 	// state param cookies require HTTPS by default; disable for localhost development
 	stateConfig := gologin.DebugOnlyCookieConfig
-	mux.Handle("/google/login", google.StateHandler(stateConfig, google.LoginHandler(oauth2Config, nil)))
-	mux.Handle("/google/callback", google.StateHandler(stateConfig, google.CallbackHandler(oauth2Config, issueSession(), nil)))
-	return mux
+	router.Handle("/google/login", google.StateHandler(stateConfig, google.LoginHandler(oauth2Config, nil)))
+	router.Handle("/google/callback", google.StateHandler(stateConfig, google.CallbackHandler(oauth2Config, issueSession(), nil)))
+	return router
 }
 
 // issueSession issues a cookie session after successful Google login
@@ -139,20 +142,6 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	page, _ := ioutil.ReadFile("./static/index.html")
-	fmt.Fprintf(w, string(page))
-}
-
-func bootstrapHandler(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/css")
-	page, _ := ioutil.ReadFile("./static/bootstrap.css")
-	fmt.Fprintf(w, string(page))
-}
-func appHandler(w http.ResponseWriter, req *http.Request) {
-	page, _ := ioutil.ReadFile("./static/app.js")
-	fmt.Fprintf(w, string(page))
-}
-func jqueryHandler(w http.ResponseWriter, req *http.Request) {
-	page, _ := ioutil.ReadFile("./static/jquery.js")
 	fmt.Fprintf(w, string(page))
 }
 
