@@ -14,9 +14,21 @@
         </div>
       </div>
       <div id="app">
-        <div class="row mt-4" id="alarm">
-          Status: {{ .Status }}
-        </div>
+        {{if eq .Status "OPEN"}}
+          <div class="alert alert-danger">
+            <strong>OPEN!</strong>
+          </div>
+        {{else}}
+          {{if eq .Status "CLOSED"}}
+            <div class="alert alert-success">
+              <strong>CLOSED!</strong>
+            </div>
+          {{else}}
+            <div class="alert alert-warning">
+              <strong>UNKNOWN</strong>
+            </div>
+          {{end}}
+        {{end}}
       </div>
     </div>
     <form action="/logout" method="post"><input type="submit" value="Logout"></form>
