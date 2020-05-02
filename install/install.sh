@@ -61,12 +61,12 @@ echo -n ${latestVersion} > ${install_dir}/public/latestVersion
 mv ${archive_path}/pi-alarm ${install_dir}/
 configure_app
 
+install_pagekite
+
 sudo systemctl enable pi-alarm.service
 sudo systemctl start pi-alarm.service
 sudo systemctl enable pagekite.service
 sudo systemctl start pagekite.service
-
-install_pagekite
 
 rm -rf ${archive_path}
 echo "Installation complete"
