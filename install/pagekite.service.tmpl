@@ -1,0 +1,13 @@
+[Unit]
+Description=Pagekite
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/pagekite.py 8080 {{.PAGE_KITE}}
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target

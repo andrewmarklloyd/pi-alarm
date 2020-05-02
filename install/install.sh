@@ -21,10 +21,15 @@ configure_app() {
 }
 
 install_pagekite() {
-  curl -O https://pagekite.net/pk/pagekite.py
+  curl -s -O https://pagekite.net/pk/pagekite.py
   chmod +x pagekite.py
-  mv pagekite.py /usr/local/bin/pagekite.py
-  echo "TODO: pagekite.py --add"
+  sudo mv pagekite.py /usr/local/bin/pagekite.py
+  echo "Enter the pagekite name:"
+  read PAGE_KITE
+  sed "s/{{.PAGE_KITE}}/${PAGE_KITE}/" ${archive_path}/install/pagekite.service.tmpl > ${archive_path}/install/pagekite.service
+  sudo mv ${archive_path}/install/pagekite.service /etc/systemd/system/
+  echo "Entering configuration for Pagekite. Use ctrl-c after configuration is complete."
+  pagekite.py 8080 ${PAGE_KITE}
 }
 
 sudo apt-get update
@@ -60,10 +65,6 @@ rm -rf ${archive_path}
 sudo systemctl enable pi-alarm.service
 sudo systemctl start pi-alarm.service
 
-echo "Install pagekite? y/n"
-read answer
-if [[ ${answer} == "y" ]]; then
-  install_pagekite
-fi
+install_pagekite
 
 echo "Installation complete"
