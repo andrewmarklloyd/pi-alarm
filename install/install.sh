@@ -11,7 +11,7 @@ configure_app() {
   read -s AUTHORIZED_USERS
 
   # / as a delimter fails on REDIRECT_URL, using ~ instead
-  sed "s~{{.GOOGLE_CLIENT_ID}}~${GOOGLE_CLIENT_ID}~" ${archive_path}~install~pi-alarm.service.tmpl \
+  sed "s~{{.GOOGLE_CLIENT_ID}}~${GOOGLE_CLIENT_ID}~" ${archive_path}/install/pi-alarm.service.tmpl \
        | sed "s~{{.GOOGLE_CLIENT_SECRET}}~${GOOGLE_CLIENT_SECRET}~" \
        | sed "s~{{.REDIRECT_URL}}~${REDIRECT_URL}~" \
        | sed "s~{{.AUTHORIZED_USERS}}~${AUTHORIZED_USERS}~" > ${archive_path}/install/pi-alarm.service
