@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -11,15 +13,15 @@ import (
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/gpio"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/util"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/web"
-	"github.com/stianeikeland/go-rpio"
 )
 
 const (
-	defaultPin = 18
+	defaultPin  = 18
+	PRIVATE_DIR = "/private/"
 )
 
-var pin rpio.Pin
 var config *util.Config
+var gpioIF gpio.GPIO
 
 func main() {
 	const address = "0.0.0.0:8080"
@@ -53,7 +55,9 @@ func main() {
 		log.Fatal("Missing Authorized Users")
 	}
 
-	pin, err = gpio.SetupGPIO(config.Pin)
+	err = gpioIF.SetupGPIO(config.Pin)
+
+	server := web.NewServer(config, statusHandler)
 
 	log.Println("Creating channel to cleanup GPIO pins")
 	c := make(chan os.Signal)
@@ -66,8 +70,17 @@ func main() {
 
 	log.Printf("Starting Server listening on %s\n", address)
 
-	err = http.ListenAndServe(address, web.NewServer(config))
+	err = http.ListenAndServe(address, server)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+// statusHandler shows protected user content.
+func statusHandler(w http.ResponseWriter, req *http.Request) {
+	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
+	data := util.StatusPageData{
+		Status: gpioIF.CurrentStatus(),
+	}
+	tmpl.Execute(w, data)
 }

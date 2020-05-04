@@ -5,9 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"text/template"
 
-	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/gpio"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/util"
 	"github.com/dghubble/gologin/v2"
 	"github.com/dghubble/gologin/v2/google"
@@ -33,7 +31,7 @@ var config *util.Config
 var sessionStore = sessions.NewCookieStore([]byte(sessionSecret), nil)
 
 // New returns a new ServeMux with app routes.
-func NewServer(config *util.Config) *gmux.Router {
+func NewServer(config *util.Config, statusHandler http.HandlerFunc) *gmux.Router {
 	router := gmux.NewRouter().StrictSlash(true)
 	router.
 		PathPrefix(PUBLIC_DIR).
@@ -94,14 +92,14 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, string(page))
 }
 
-// statusHandler shows protected user content.
-func statusHandler(w http.ResponseWriter, req *http.Request) {
-	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
-	data := util.StatusPageData{
-		Status: gpio.CurrentStatus(),
-	}
-	tmpl.Execute(w, data)
-}
+// // statusHandler shows protected user content.
+// func statusHandler(w http.ResponseWriter, req *http.Request) {
+// 	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
+// 	data := util.StatusPageData{
+// 		Status: gpioIF.CurrentStatus(),
+// 	}
+// 	tmpl.Execute(w, data)
+// }
 
 // logoutHandler destroys the session on POSTs and redirects to home.
 func logoutHandler(w http.ResponseWriter, req *http.Request) {

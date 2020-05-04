@@ -15,10 +15,13 @@ const (
 )
 
 var testmode = false
-var pin rpio.Pin
 
-func SetupGPIO(pinNumber int) (rpio.Pin, error) {
-	pin = rpio.Pin(pinNumber)
+type GPIO struct {
+	pin rpio.Pin
+}
+
+func (g GPIO) SetupGPIO(pinNumber int) error {
+	g.pin = rpio.Pin(pinNumber)
 
 	err := rpio.Open()
 	if err != nil {
@@ -27,23 +30,23 @@ func SetupGPIO(pinNumber int) (rpio.Pin, error) {
 	}
 
 	if !testmode {
-		pin.Input()
-		pin.Pull(rpio.PullUp)
+		g.pin.Input()
+		g.pin.Pull(rpio.PullUp)
 	}
 
-	return pin, nil
+	return nil
 }
 
 func Cleanup() {
 	rpio.Close()
 }
 
-func CurrentStatus() string {
+func (g GPIO) CurrentStatus() string {
 	var pinState int
 	if testmode {
 		pinState = rand.Intn(2)
 	} else {
-		pinState = int(pin.Read())
+		pinState = int(g.pin.Read())
 	}
 
 	if pinState == 0 {

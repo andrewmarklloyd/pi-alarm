@@ -3,3 +3,4 @@ config.yml
 version
 latestVersion
 .env
+test.sh
