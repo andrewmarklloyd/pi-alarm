@@ -5,20 +5,20 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 	"os"
 	"os/signal"
-	"syscall"
+	"strconv"
 	"strings"
+	"syscall"
 	"text/template"
-	"math/rand"
 
-	"github.com/stianeikeland/go-rpio"
+	"github.com/andrewmarklloyd/pi-alam/internal/pkg/gpio"
 	"github.com/dghubble/gologin/v2"
 	"github.com/dghubble/gologin/v2/google"
 	"github.com/dghubble/sessions"
-	"golang.org/x/oauth2"
 	gmux "github.com/gorilla/mux"
+	"github.com/stianeikeland/go-rpio"
+	"golang.org/x/oauth2"
 	googleOAuth2 "golang.org/x/oauth2/google"
 )
 
@@ -29,15 +29,11 @@ const (
 	defaultPin     = 18
 	PUBLIC_DIR     = "/public/"
 	PRIVATE_DIR    = "/private/"
-	OPEN           = "OPEN"
-	CLOSED         = "CLOSED"
-	UNKNOWN        = "UNKNOWN"
 )
 
 // sessionStore encodes and decodes session data stored in signed cookies
 var sessionStore = sessions.NewCookieStore([]byte(sessionSecret), nil)
 
-var testmode = false
 var pin rpio.Pin
 var config *Config
 
@@ -60,10 +56,10 @@ func main() {
 	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
 	var pin int
 	pin, err := strconv.Atoi(os.Getenv("GPIO_PIN"))
-  if err != nil {
-    log.Printf("Failed to parse GPIO_PIN env var, using default %d", defaultPin)
+	if err != nil {
+		log.Printf("Failed to parse GPIO_PIN env var, using default %d", defaultPin)
 		pin = defaultPin
-  }
+	}
 	config = &Config{
 		ClientID:        os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret:    os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -86,7 +82,7 @@ func main() {
 		log.Fatal("Missing Authorized Users")
 	}
 
-	setupGPIO(config.Pin)
+	pin = gpio.SetupGPIO(config.Pin)
 
 	log.Println("Creating channel to cleanup GPIO pins")
 	c := make(chan os.Signal)
@@ -109,8 +105,8 @@ func main() {
 func New(config *Config) *gmux.Router {
 	router := gmux.NewRouter().StrictSlash(true)
 	router.
-    PathPrefix(PUBLIC_DIR).
-    Handler(http.StripPrefix(PUBLIC_DIR, http.FileServer(http.Dir("."+PUBLIC_DIR))))
+		PathPrefix(PUBLIC_DIR).
+		Handler(http.StripPrefix(PUBLIC_DIR, http.FileServer(http.Dir("."+PUBLIC_DIR))))
 
 	router.HandleFunc("/", welcomeHandler)
 	router.Handle("/status", requireLogin(http.HandlerFunc(statusHandler)))
@@ -171,7 +167,7 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 func statusHandler(w http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
 	data := StatusPageData{
-		Status: currentStatus(),
+		Status: CurrentStatus(),
 	}
 	tmpl.Execute(w, data)
 }
@@ -202,40 +198,4 @@ func isAuthenticated(req *http.Request) bool {
 		return true
 	}
 	return false
-}
-
-func setupGPIO(pinNumber int) {
-	pin = rpio.Pin(pinNumber)
-
-	err := rpio.Open()
-	if err != nil {
-		log.Println(fmt.Sprintf("Unable to open gpio: %s, continuing but running in test mode.", err.Error()))
-		testmode = true
-	}
-
-	if !testmode {
-		pin.Input()
-		pin.Pull(rpio.PullUp)
-	}
-}
-
-func cleanup(pinNumber int) {
-	fmt.Println("Cleaning up pin", pinNumber)
-	rpio.Close()
-}
-
-func currentStatus() string {
-	var pinState int
-	if testmode {
-		pinState = rand.Intn(2)
-	} else {
-		pinState = int(pin.Read())
-	}
-
-	if pinState == 0 {
-		return CLOSED
-	} else if pinState == 1 {
-		return OPEN
-	}
-	return UNKNOWN
 }
