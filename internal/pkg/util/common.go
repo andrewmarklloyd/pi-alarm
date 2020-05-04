@@ -7,6 +7,8 @@ type Config struct {
 	AuthorizedUsers string
 	Pin             int
 	Debug           bool
+	// StatusInterval is the interval of seconds to check the sensor status
+	StatusInterval int
 }
 
 type StatusPageData struct {
