@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"text/template"
 
-	"github.com/andrewmarklloyd/pi-alam/internal/pkg/gpio"
+	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/gpio"
 	"github.com/dghubble/gologin/v2"
 	"github.com/dghubble/gologin/v2/google"
 	"github.com/dghubble/sessions"
@@ -23,12 +23,13 @@ import (
 )
 
 const (
-	sessionName    = "pi-alarm"
-	sessionSecret  = "example cookie signing secret"
-	sessionUserKey = "googleID"
-	defaultPin     = 18
-	PUBLIC_DIR     = "/public/"
-	PRIVATE_DIR    = "/private/"
+	sessionName     = "pi-alarm"
+	sessionSecret   = "example cookie signing secret"
+	sessionUserKey  = "googleID"
+	defaultPin      = 18
+	PUBLIC_DIR      = "/public/"
+	PRIVATE_DIR     = "/private/"
+	STATUS_ENDPOINT = "/status"
 )
 
 // sessionStore encodes and decodes session data stored in signed cookies
@@ -54,18 +55,18 @@ func main() {
 	const address = "0.0.0.0:8080"
 
 	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
-	var pin int
-	pin, err := strconv.Atoi(os.Getenv("GPIO_PIN"))
+	var pinNum int
+	pinNum, err := strconv.Atoi(os.Getenv("GPIO_PIN"))
 	if err != nil {
 		log.Printf("Failed to parse GPIO_PIN env var, using default %d", defaultPin)
-		pin = defaultPin
+		pinNum = defaultPin
 	}
 	config = &Config{
 		ClientID:        os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret:    os.Getenv("GOOGLE_CLIENT_SECRET"),
 		RedirectURL:     os.Getenv("REDIRECT_URL"),
 		AuthorizedUsers: os.Getenv("AUTHORIZED_USERS"),
-		Pin:             pin,
+		Pin:             pinNum,
 		Debug:           debug,
 	}
 
@@ -82,14 +83,14 @@ func main() {
 		log.Fatal("Missing Authorized Users")
 	}
 
-	pin = gpio.SetupGPIO(config.Pin)
+	pin, err = gpio.SetupGPIO(config.Pin)
 
 	log.Println("Creating channel to cleanup GPIO pins")
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		cleanup(config.Pin)
+		gpio.Cleanup()
 		os.Exit(1)
 	}()
 
@@ -109,7 +110,7 @@ func New(config *Config) *gmux.Router {
 		Handler(http.StripPrefix(PUBLIC_DIR, http.FileServer(http.Dir("."+PUBLIC_DIR))))
 
 	router.HandleFunc("/", welcomeHandler)
-	router.Handle("/status", requireLogin(http.HandlerFunc(statusHandler)))
+	router.Handle(STATUS_ENDPOINT, requireLogin(http.HandlerFunc(statusHandler)))
 	router.HandleFunc("/logout", logoutHandler)
 	// 1. Register Login and Callback handlers
 	oauth2Config := &oauth2.Config{
@@ -136,14 +137,14 @@ func issueSession() http.Handler {
 			return
 		}
 		if !strings.Contains(config.AuthorizedUsers, googleUser.Email) {
-			http.Redirect(w, req, fmt.Sprint("%serror.html", PUBLIC_DIR), http.StatusFound)
+			http.Redirect(w, req, fmt.Sprintf("%serror.html", PUBLIC_DIR), http.StatusFound)
 			return
 		}
 		// 2. Implement a success handler to issue some form of session
 		session := sessionStore.New(sessionName)
 		session.Values[sessionUserKey] = googleUser.Id
 		session.Save(w)
-		http.Redirect(w, req, "/status", http.StatusFound)
+		http.Redirect(w, req, STATUS_ENDPOINT, http.StatusFound)
 	}
 	return http.HandlerFunc(fn)
 }
@@ -155,7 +156,7 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if isAuthenticated(req) {
-		http.Redirect(w, req, "/status", http.StatusFound)
+		http.Redirect(w, req, STATUS_ENDPOINT, http.StatusFound)
 		return
 	}
 
@@ -167,7 +168,7 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 func statusHandler(w http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
 	data := StatusPageData{
-		Status: CurrentStatus(),
+		Status: gpio.CurrentStatus(),
 	}
 	tmpl.Execute(w, data)
 }

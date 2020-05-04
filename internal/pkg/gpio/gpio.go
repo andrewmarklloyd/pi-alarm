@@ -34,8 +34,7 @@ func SetupGPIO(pinNumber int) (rpio.Pin, error) {
 	return pin, nil
 }
 
-func cleanup(pinNumber int) {
-	fmt.Println("Cleaning up pin", pinNumber)
+func Cleanup() {
 	rpio.Close()
 }
 
