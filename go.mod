@@ -12,7 +12,9 @@ require (
 	github.com/mdempsky/unconvert v0.0.0-20200228143138-95ecdbfc0b5f // indirect
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/securego/gosec v0.0.0-20200401082031-e946c8c39989 // indirect
+	github.com/spf13/viper v1.6.3
 	github.com/stianeikeland/go-rpio v4.2.0+incompatible
 	github.com/stripe/safesql v0.2.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	gopkg.in/yaml.v2 v2.2.8
 )

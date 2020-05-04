@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/util"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/web"
 	"github.com/robfig/cron/v3"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -21,6 +24,11 @@ const (
 	defaultIntervalSeconds = 10
 	PRIVATE_DIR            = "/private/"
 )
+
+type stateConfig struct {
+	lastKnownStatus string `yaml:"lastKnownStatus"`
+	lastReportTime  string `yaml:"lastReportTime"`
+}
 
 var config *util.Config
 var gpio gpioLib.GPIO
@@ -100,8 +108,53 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 func configureCron(statusInterval int) {
 	cronLib = cron.New()
 	cronLib.AddFunc(fmt.Sprintf("@every %ds", statusInterval), func() {
-		log.Println(gpio.CurrentStatus())
+		state, err := readState()
+		if err != nil {
+			log.Println("Error reading state file: ", err)
+		}
+		currentStatus := gpio.CurrentStatus()
+		if state.lastKnownStatus != currentStatus {
+			log.Println(fmt.Sprintf("State changed. Last known state: %s, current state: %s", state.lastKnownStatus, currentStatus))
+		}
+		state.lastKnownStatus = currentStatus
+		writeState(state)
 	})
 
 	cronLib.Start()
+}
+
+func writeState(state stateConfig) error {
+	d, err := yaml.Marshal(&state)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile("config.yml", d, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func readState() (stateConfig, error) {
+	cfg := stateConfig{}
+	viper.SetConfigName("state.yml")
+	viper.AddConfigPath(currentdir())
+	err := viper.ReadInConfig()
+	if err != nil {
+		return cfg, err
+	}
+
+	err = viper.Unmarshal(&cfg)
+	if err != nil {
+		return cfg, err
+	}
+	return cfg, nil
+}
+
+func currentdir() (cwd string) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+	}
+	return cwd
 }
