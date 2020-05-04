@@ -55,8 +55,8 @@ func main() {
 		log.Fatal("Missing Authorized Users")
 	}
 
+	gpioIF = gpio.GPIO{}
 	err = gpioIF.SetupGPIO(config.Pin)
-
 	server := web.NewServer(config, statusHandler)
 
 	log.Println("Creating channel to cleanup GPIO pins")
