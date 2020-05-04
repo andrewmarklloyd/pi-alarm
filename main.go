@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/gpio"
+	gpioLib "github.com/andrewmarklloyd/pi-alarm/internal/pkg/gpio"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/util"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/web"
 )
@@ -21,7 +21,7 @@ const (
 )
 
 var config *util.Config
-var gpioIF gpio.GPIO
+var gpio gpioLib.GPIO
 
 func main() {
 	const address = "0.0.0.0:8080"
@@ -55,8 +55,8 @@ func main() {
 		log.Fatal("Missing Authorized Users")
 	}
 
-	gpioIF = gpio.GPIO{}
-	err = gpioIF.SetupGPIO(config.Pin)
+	gpio = gpioLib.GPIO{}
+	err = gpio.SetupGPIO(config.Pin)
 	server := web.NewServer(config, statusHandler)
 
 	log.Println("Creating channel to cleanup GPIO pins")
@@ -80,7 +80,7 @@ func main() {
 func statusHandler(w http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
 	data := util.StatusPageData{
-		Status: gpioIF.CurrentStatus(),
+		Status: gpio.CurrentStatus(),
 	}
 	tmpl.Execute(w, data)
 }

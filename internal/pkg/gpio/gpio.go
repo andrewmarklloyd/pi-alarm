@@ -37,7 +37,7 @@ func (g GPIO) SetupGPIO(pinNumber int) error {
 	return nil
 }
 
-func Cleanup() {
+func (g GPIO) Cleanup() {
 	rpio.Close()
 }
 
