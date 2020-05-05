@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	gpioLib "github.com/andrewmarklloyd/pi-alarm/internal/pkg/gpio"
+	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/notify"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/util"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/web"
 	"github.com/robfig/cron/v3"
@@ -106,7 +107,7 @@ func configureCron(statusInterval int) {
 		} else {
 			currentStatus := gpio.CurrentStatus()
 			if state.LastKnownStatus != currentStatus {
-				log.Println(fmt.Sprintf("State changed. Last known state: %s, current state: %s", state.LastKnownStatus, currentStatus))
+				notify.SendMessage(currentStatus)
 			}
 			state.LastKnownStatus = currentStatus
 			util.WriteState(state)
