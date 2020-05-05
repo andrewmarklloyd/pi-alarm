@@ -26,6 +26,8 @@ const (
 var config *util.Config
 var gpio gpioLib.GPIO
 var cronLib *cron.Cron
+var messenger notify.Messenger
+var testMessageMode bool = false
 
 func main() {
 	const address = "0.0.0.0:8080"
@@ -44,13 +46,15 @@ func main() {
 		statusInterval = defaultIntervalSeconds
 	}
 	config = &util.Config{
-		ClientID:        os.Getenv("GOOGLE_CLIENT_ID"),
-		ClientSecret:    os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:     os.Getenv("REDIRECT_URL"),
-		AuthorizedUsers: os.Getenv("AUTHORIZED_USERS"),
-		Pin:             pinNum,
-		StatusInterval:  statusInterval,
-		Debug:           debug,
+		ClientID:         os.Getenv("GOOGLE_CLIENT_ID"),
+		ClientSecret:     os.Getenv("GOOGLE_CLIENT_SECRET"),
+		RedirectURL:      os.Getenv("REDIRECT_URL"),
+		AuthorizedUsers:  os.Getenv("AUTHORIZED_USERS"),
+		Pin:              pinNum,
+		StatusInterval:   statusInterval,
+		Debug:            debug,
+		TwilioAccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
+		TwilioAuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
 	}
 
 	if config.ClientID == "" {
@@ -65,10 +69,21 @@ func main() {
 	if config.AuthorizedUsers == "" {
 		log.Fatal("Missing Authorized Users")
 	}
+	if config.TwilioAccountSID == "" && config.TwilioAuthToken == "" {
+		log.Println("Twilio auth env vars not set, running in testMessageMode")
+		testMessageMode = true
+	}
+	if config.AuthorizedUsers == "" {
+		log.Fatal("Missing Authorized Users")
+	}
 
 	gpio = gpioLib.GPIO{}
 	err = gpio.SetupGPIO(config.Pin)
 	server := web.NewServer(config, statusHandler)
+	messenger = notify.Messenger{
+		AccountSID: config.TwilioAccountSID,
+		AuthToken:  config.TwilioAuthToken,
+	}
 
 	configureCron(config.StatusInterval)
 
@@ -107,7 +122,11 @@ func configureCron(statusInterval int) {
 		} else {
 			currentStatus := gpio.CurrentStatus()
 			if state.LastKnownStatus != currentStatus {
-				notify.SendMessage(currentStatus)
+				if !testMessageMode {
+					messenger.SendMessage(currentStatus)
+				} else {
+					log.Println(fmt.Sprintf("State changed, current state: %s", state))
+				}
 			}
 			state.LastKnownStatus = currentStatus
 			util.WriteState(state)

@@ -8,7 +8,9 @@ type Config struct {
 	Pin             int
 	Debug           bool
 	// StatusInterval is the interval of seconds to check the sensor status
-	StatusInterval int
+	StatusInterval   int
+	TwilioAccountSID string
+	TwilioAuthToken  string
 }
 
 type StatusPageData struct {
