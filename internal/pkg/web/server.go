@@ -92,15 +92,6 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, string(page))
 }
 
-// // statusHandler shows protected user content.
-// func statusHandler(w http.ResponseWriter, req *http.Request) {
-// 	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
-// 	data := util.StatusPageData{
-// 		Status: gpioIF.CurrentStatus(),
-// 	}
-// 	tmpl.Execute(w, data)
-// }
-
 // logoutHandler destroys the session on POSTs and redirects to home.
 func logoutHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
