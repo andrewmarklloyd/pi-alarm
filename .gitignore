@@ -4,3 +4,4 @@ version
 latestVersion
 .env
 test.sh
+state.yml

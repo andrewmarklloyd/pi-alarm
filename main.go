@@ -26,8 +26,7 @@ const (
 )
 
 type stateConfig struct {
-	lastKnownStatus string `yaml:"lastKnownStatus"`
-	lastReportTime  string `yaml:"lastReportTime"`
+	LastKnownStatus string `yaml:"lastKnownStatus"`
 }
 
 var config *util.Config
@@ -111,13 +110,14 @@ func configureCron(statusInterval int) {
 		state, err := readState()
 		if err != nil {
 			log.Println("Error reading state file: ", err)
+		} else {
+			currentStatus := gpio.CurrentStatus()
+			if state.LastKnownStatus != currentStatus {
+				log.Println(fmt.Sprintf("State changed. Last known state: %s, current state: %s", state.LastKnownStatus, currentStatus))
+			}
+			state.LastKnownStatus = currentStatus
+			writeState(state)
 		}
-		currentStatus := gpio.CurrentStatus()
-		if state.lastKnownStatus != currentStatus {
-			log.Println(fmt.Sprintf("State changed. Last known state: %s, current state: %s", state.lastKnownStatus, currentStatus))
-		}
-		state.lastKnownStatus = currentStatus
-		writeState(state)
 	})
 
 	cronLib.Start()
@@ -128,7 +128,7 @@ func writeState(state stateConfig) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile("config.yml", d, 0644)
+	err = ioutil.WriteFile("state.yml", d, 0644)
 	if err != nil {
 		return err
 	}
@@ -136,25 +136,17 @@ func writeState(state stateConfig) error {
 }
 
 func readState() (stateConfig, error) {
-	cfg := stateConfig{}
-	viper.SetConfigName("state.yml")
-	viper.AddConfigPath(currentdir())
+	state := stateConfig{}
+	viper.SetConfigName("state")
+	viper.SetConfigType("yml")
+	viper.AddConfigPath(".")
 	err := viper.ReadInConfig()
 	if err != nil {
-		return cfg, err
+		return state, err
 	}
-
-	err = viper.Unmarshal(&cfg)
+	err = viper.Unmarshal(&state)
 	if err != nil {
-		return cfg, err
+		return state, err
 	}
-	return cfg, nil
-}
-
-func currentdir() (cwd string) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println(err)
-	}
-	return cwd
+	return state, nil
 }
