@@ -13,14 +13,14 @@ type Messenger struct {
 	AuthToken  string
 }
 
-func (m Messenger) SendMessage(state string) {
+func (m Messenger) SendMessage(body string) {
 	urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + m.AccountSID + "/Messages.json"
 
 	// Pack up the data for our message
 	msgData := url.Values{}
 	msgData.Set("To", "+12534484393")
 	msgData.Set("From", "+12025190922")
-	msgData.Set("Body", state)
+	msgData.Set("Body", body)
 	msgDataReader := *strings.NewReader(msgData.Encode())
 
 	// Create HTTP request client

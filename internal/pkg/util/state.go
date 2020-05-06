@@ -9,6 +9,7 @@ import (
 
 type stateConfig struct {
 	LastKnownStatus string `yaml:"lastKnownStatus"`
+	Armed           bool   `yaml:"armed"`
 }
 
 func ReadState() (stateConfig, error) {

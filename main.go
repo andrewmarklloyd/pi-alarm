@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -28,6 +29,10 @@ var gpio gpioLib.GPIO
 var cronLib *cron.Cron
 var messenger notify.Messenger
 var testMessageMode bool = false
+
+type Arming struct {
+	Armed bool `json:"armed"`
+}
 
 func main() {
 	const address = "0.0.0.0:8080"
@@ -85,9 +90,11 @@ func main() {
 		AuthToken:  config.TwilioAuthToken,
 	}
 
-	configureCron(config.StatusInterval)
+	cronLib = cron.New()
+	configureStateChanged(config.StatusInterval)
+	configureOpenAlert(config.StatusInterval)
+	cronLib.Start()
 
-	log.Println("Creating channel to cleanup GPIO pins")
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -106,15 +113,26 @@ func main() {
 
 // statusHandler shows protected user content.
 func statusHandler(w http.ResponseWriter, req *http.Request) {
-	tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
-	data := util.StatusPageData{
-		Status: gpio.CurrentStatus(),
+	if req.Method == "GET" {
+		tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
+		data := util.StatusPageData{
+			Status: gpio.CurrentStatus(),
+		}
+		tmpl.Execute(w, data)
+	} else if req.Method == "POST" {
+		var arming Arming
+		err := json.NewDecoder(req.Body).Decode(&arming)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Fprintf(w, "success: %+v", true)
+	} else {
+
 	}
-	tmpl.Execute(w, data)
 }
 
-func configureCron(statusInterval int) {
-	cronLib = cron.New()
+func configureStateChanged(statusInterval int) {
 	cronLib.AddFunc(fmt.Sprintf("@every %ds", statusInterval), func() {
 		state, err := util.ReadState()
 		if err != nil {
@@ -123,15 +141,48 @@ func configureCron(statusInterval int) {
 			currentStatus := gpio.CurrentStatus()
 			if state.LastKnownStatus != currentStatus {
 				if !testMessageMode {
-					messenger.SendMessage(currentStatus)
+					messenger.SendMessage(fmt.Sprintf("Door is %s", currentStatus))
 				} else {
-					log.Println(fmt.Sprintf("State changed, current state: %s", state))
+					log.Println(fmt.Sprintf("State changed, current state: %s", state.LastKnownStatus))
 				}
 			}
 			state.LastKnownStatus = currentStatus
 			util.WriteState(state)
 		}
 	})
+}
 
-	cronLib.Start()
+func configureOpenAlert(statusInterval int) {
+	cronLib.AddFunc(fmt.Sprintf("@every %ds", statusInterval), func() {
+		state, err := util.ReadState()
+		if err != nil {
+			log.Println(fmt.Sprintf("Error getting armed status: %s", err))
+			return
+		}
+		if state.LastKnownStatus == "OPEN" && state.Armed {
+			if testMessageMode {
+				log.Printf("Alert, door is %s ", state.LastKnownStatus)
+			} else {
+				messenger.SendMessage(fmt.Sprintf("Alert, door is %s", state.LastKnownStatus))
+			}
+		}
+	})
+}
+
+func setArmed(armed bool) {
+	state, err := util.ReadState()
+	if err != nil {
+		log.Println("Error reading state file: ", err)
+	} else {
+		state.Armed = armed
+		util.WriteState(state)
+	}
+}
+
+func isArmed() (bool, error) {
+	state, err := util.ReadState()
+	if err != nil {
+		return false, err
+	}
+	return state.Armed, nil
 }
