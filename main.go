@@ -126,7 +126,8 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		fmt.Fprintf(w, "success: %+v", true)
+		setArmed(arming.Armed)
+		fmt.Fprintf(w, "{\"armed\": %+v}", arming.Armed)
 	} else {
 
 	}
@@ -175,6 +176,7 @@ func setArmed(armed bool) {
 		log.Println("Error reading state file: ", err)
 	} else {
 		state.Armed = armed
+		log.Printf("Setting armed to %v", state.Armed)
 		util.WriteState(state)
 	}
 }

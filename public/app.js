@@ -5,8 +5,8 @@ $(document).ready(function(){
          url: '/status',
          type: 'post',
          data: '{"armed": true}',
-         success :function(){
-           console.log('success')
+         success :function(response){
+           console.log('response', response)
          }
      });
     });
@@ -15,8 +15,8 @@ $(document).ready(function(){
           url: '/status',
           type: 'post',
           data: '{"armed": false}',
-          success :function(){
-            console.log('success')
+          success :function(response){
+            console.log('response', response)
           }
       });
      });
