@@ -140,7 +140,7 @@ func configureStateChanged(statusInterval int) {
 			log.Println("Error reading state file: ", err)
 		} else {
 			currentStatus := gpio.CurrentStatus()
-			if state.LastKnownStatus != currentStatus {
+			if state.LastKnownStatus != currentStatus && state.Armed {
 				if !testMessageMode {
 					messenger.SendMessage(fmt.Sprintf("Door is %s", currentStatus))
 				} else {
