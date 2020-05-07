@@ -92,7 +92,7 @@ func main() {
 
 	cronLib = cron.New()
 	configureStateChanged(config.StatusInterval)
-	configureOpenAlert(config.StatusInterval)
+	// configureOpenAlert(config.StatusInterval)
 	cronLib.Start()
 
 	c := make(chan os.Signal)
