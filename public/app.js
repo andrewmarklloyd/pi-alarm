@@ -44,7 +44,7 @@ function statusHandler(status) {
 }
 
 function setupWebSocket(){
-  if (location.protocol == "https") {
+  if (location.protocol == "https:") {
     this.ws = new WebSocket(`wss://${location.host}/ws`);
   } else {
     this.ws = new WebSocket(`ws://${location.host}/ws`);
