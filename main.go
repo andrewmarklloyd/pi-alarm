@@ -104,7 +104,7 @@ func main() {
 	}
 
 	cronLib = cron.New()
-	// configureStateChanged(config.StatusInterval)
+	configureStateChanged(config.StatusInterval)
 	// configureOpenAlert(config.StatusInterval)
 	cronLib.Start()
 
