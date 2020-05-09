@@ -27,22 +27,22 @@
       <div id="status">
         {{if eq .Status "OPEN"}}
           <div class="alert alert-danger">
-            <strong>Door OPEN</strong>
+            <h4 class="alert-heading">Door OPEN</h4>
           </div>
         {{else}}
           {{if eq .Status "CLOSED"}}
             <div class="alert alert-success">
-              <strong>Door CLOSED</strong>
+              <h4 class="alert-heading">Door CLOSED</h4>
             </div>
           {{else}}
             <div class="alert alert-warning">
-              <strong>UNKNOWN</strong>
+              <h4 class="alert-heading">Door Status UNKNOWN</h4>
             </div>
           {{end}}
         {{end}}
       </div>
       <div id="armed" class="alert alert-success">
-        <strong>System Armed</strong>
+        <h4 class="alert-heading">System Armed</h4>
       </div>
     </div>
     <form action="/logout" method="post"><input class="btn btn-light btn-sm" type="submit" value="Logout"></form>

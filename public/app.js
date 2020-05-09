@@ -29,11 +29,11 @@ window.addEventListener("load", function(evt) {
 
 function armedHandler(armed) {
   if (armed) {
-    $('#armed').html("<strong>System Armed</strong>");
+    $('#armed').html("<h4 class=\"alert-heading\">System Armed</h4>");
     $('#armed').removeClass("alert-warning");
     $('#armed').addClass("alert-success");
   } else {
-    $('#armed').html("<strong>System Disarmed</strong>");
+    $('#armed').html("<h4 class=\"alert-heading\">System Disarmed</h4>");
     $('#armed').removeClass("alert-success");
     $('#armed').addClass("alert-warning");
   }
