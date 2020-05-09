@@ -24,15 +24,15 @@
           </button>
         </div>
       </div>
-      <div id="app">
+      <div id="status">
         {{if eq .Status "OPEN"}}
           <div class="alert alert-danger">
-            <strong>OPEN!</strong>
+            <strong>Door OPEN</strong>
           </div>
         {{else}}
           {{if eq .Status "CLOSED"}}
             <div class="alert alert-success">
-              <strong>CLOSED!</strong>
+              <strong>Door CLOSED</strong>
             </div>
           {{else}}
             <div class="alert alert-warning">
@@ -40,6 +40,9 @@
             </div>
           {{end}}
         {{end}}
+      </div>
+      <div id="armed" class="alert alert-success">
+        <strong>System Armed</strong>
       </div>
     </div>
     <form action="/logout" method="post"><input class="btn btn-light btn-sm" type="submit" value="Logout"></form>

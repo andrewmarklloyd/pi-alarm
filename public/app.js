@@ -6,7 +6,7 @@ $(document).ready(function(){
          type: 'post',
          data: '{"armed": true}',
          success :function(response){
-           console.log('response', response)
+           armedHandler(JSON.parse(response).armed)
          }
      });
     });
@@ -16,7 +16,7 @@ $(document).ready(function(){
           type: 'post',
           data: '{"armed": false}',
           success :function(response){
-            console.log('response', response)
+            armedHandler(JSON.parse(response).armed)
           }
       });
      });
@@ -28,11 +28,19 @@ window.addEventListener("load", function(evt) {
 });
 
 function armedHandler(armed) {
-  console.log("Armed: " + armed);
+  if (armed) {
+    $('#armed').html("<strong>System Armed</strong>");
+    $('#armed').removeClass("alert-warning");
+    $('#armed').addClass("alert-success");
+  } else {
+    $('#armed').html("<strong>System Disarmed</strong>");
+    $('#armed').removeClass("alert-success");
+    $('#armed').addClass("alert-warning");
+  }
 }
 
 function statusHandler(status) {
-  console.log("Status: " + status);
+  // console.log("Status: " + status);
 }
 
 function setupWebSocket(){

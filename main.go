@@ -151,7 +151,7 @@ func websocketHandler(w http.ResponseWriter, req *http.Request) {
 				log.Println("Error getting armed status: ", err)
 				break
 			}
-			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"armed\",\"value\":\"%v\"}", state.Armed)))
+			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"armed\",\"value\":%v}", state.Armed)))
 			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"status\",\"value\":\"%v\"}", state.LastKnownStatus)))
 		} else {
 			log.Println("recv: " + string(message))
@@ -224,7 +224,6 @@ func setArmed(armed bool) {
 		log.Println("Error reading state file: ", err)
 	} else {
 		state.Armed = armed
-		log.Printf("Setting armed to %v", state.Armed)
 		util.WriteState(state)
 	}
 }
