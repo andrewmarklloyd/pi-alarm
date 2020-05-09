@@ -27,6 +27,14 @@ window.addEventListener("load", function(evt) {
   setupWebSocket()
 });
 
+function armedHandler(armed) {
+  console.log("Armed: " + armed);
+}
+
+function statusHandler(status) {
+  console.log("Status: " + status);
+}
+
 function setupWebSocket(){
   this.ws = new WebSocket(`ws://${location.host}/ws`);
   this.ws.onclose = function(){
@@ -38,9 +46,19 @@ function setupWebSocket(){
     }, 5000)
   }
   this.ws.onmessage = function(evt) {
-    console.log("Message: " + evt.data);
+    var data = JSON.parse(evt.data)
+    switch (data.type) {
+      case "armed":
+        armedHandler(data.value)
+        break;
+      case "status":
+        statusHandler(data.value)
+        break;
+      default:
+        console.log("Unknown data type", data.type)
+    }
   }
   this.ws.onerror = function(evt) {
-      console.log("Websocket error: " + evt.data);
+    console.log("Websocket error: " + evt.data);
   }
 }

@@ -125,7 +125,7 @@ func main() {
 }
 
 func websocketHandler(w http.ResponseWriter, req *http.Request) {
-	log.Println("*****")
+	log.Println("New websocket connection")
 	ws, err := upgrader.Upgrade(w, req, nil)
 	if err != nil {
 		log.Println("upgrade:", err)
@@ -146,7 +146,13 @@ func websocketHandler(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 		if event.Message == "ping" {
-			ws.WriteMessage(websocket.TextMessage, []byte("{\"event\":\"pong\"}"))
+			state, err := util.ReadState()
+			if err != nil {
+				log.Println("Error getting armed status: ", err)
+				break
+			}
+			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"armed\",\"value\":\"%v\"}", state.Armed)))
+			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"status\",\"value\":\"%v\"}", state.LastKnownStatus)))
 		} else {
 			log.Println("recv: " + string(message))
 		}
