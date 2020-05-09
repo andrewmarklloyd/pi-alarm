@@ -31,7 +31,7 @@ var config *util.Config
 var sessionStore = sessions.NewCookieStore([]byte(sessionSecret), nil)
 
 // New returns a new ServeMux with app routes.
-func NewServer(utilConfig *util.Config, statusHandler http.HandlerFunc) *gmux.Router {
+func NewServer(utilConfig *util.Config, statusHandler http.HandlerFunc, websocketHandler http.HandlerFunc) *gmux.Router {
 	config = utilConfig
 	router := gmux.NewRouter().StrictSlash(true)
 	router.
@@ -40,7 +40,9 @@ func NewServer(utilConfig *util.Config, statusHandler http.HandlerFunc) *gmux.Ro
 
 	router.HandleFunc("/", welcomeHandler)
 	router.Handle(STATUS_ENDPOINT, requireLogin(http.HandlerFunc(statusHandler))).Methods("GET", "POST")
+	router.Handle("/ws", requireLogin(http.HandlerFunc(websocketHandler)))
 	router.HandleFunc("/logout", logoutHandler)
+
 	// 1. Register Login and Callback handlers
 	oauth2Config := &oauth2.Config{
 		ClientID:     config.ClientID,

@@ -10,11 +10,13 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	gpioLib "github.com/andrewmarklloyd/pi-alarm/internal/pkg/gpio"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/notify"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/util"
 	"github.com/andrewmarklloyd/pi-alarm/internal/pkg/web"
+	"github.com/gorilla/websocket"
 	"github.com/robfig/cron/v3"
 )
 
@@ -22,7 +24,14 @@ const (
 	defaultPin             = 18
 	defaultIntervalSeconds = 10
 	PRIVATE_DIR            = "/private/"
+	// Maximum message size allowed from peer.
+	maxMessageSize = 8192
+	// Time allowed to read the next pong message from the peer.
+	pongWait = 60 * time.Second
 )
+
+var testmode = false
+var upgrader = websocket.Upgrader{}
 
 var config *util.Config
 var gpio gpioLib.GPIO
@@ -32,6 +41,10 @@ var testMessageMode bool = false
 
 type Arming struct {
 	Armed bool `json:"armed"`
+}
+
+type Event struct {
+	Message string
 }
 
 func main() {
@@ -84,14 +97,14 @@ func main() {
 
 	gpio = gpioLib.GPIO{}
 	err = gpio.SetupGPIO(config.Pin)
-	server := web.NewServer(config, statusHandler)
+	server := web.NewServer(config, statusHandler, websocketHandler)
 	messenger = notify.Messenger{
 		AccountSID: config.TwilioAccountSID,
 		AuthToken:  config.TwilioAuthToken,
 	}
 
 	cronLib = cron.New()
-	configureStateChanged(config.StatusInterval)
+	// configureStateChanged(config.StatusInterval)
 	// configureOpenAlert(config.StatusInterval)
 	cronLib.Start()
 
@@ -108,6 +121,35 @@ func main() {
 	err = http.ListenAndServe(address, server)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
+	}
+}
+
+func websocketHandler(w http.ResponseWriter, req *http.Request) {
+	log.Println("*****")
+	ws, err := upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		log.Println("upgrade:", err)
+		return
+	}
+
+	defer ws.Close()
+	ws.SetReadLimit(maxMessageSize)
+	for {
+		_, message, err := ws.ReadMessage()
+		if err != nil {
+			break
+		}
+		var event Event
+		err = json.Unmarshal(message, &event)
+		if err != nil {
+			log.Println("Error unmarshalling json: ", err)
+			break
+		}
+		if event.Message == "ping" {
+			ws.WriteMessage(websocket.TextMessage, []byte("{\"event\":\"pong\"}"))
+		} else {
+			log.Println("recv: " + string(message))
+		}
 	}
 }
 
