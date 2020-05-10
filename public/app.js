@@ -55,6 +55,7 @@ $(document).ready(function(){
                console.log(response)
              }
          });
+         alert("Checking for updates, will restart if new version is available.")
         });
   });
 });

@@ -155,7 +155,7 @@ func systemHandler(w http.ResponseWriter, req *http.Request) {
 	case "shutdown":
 		args = []string{"shutdown", "now"}
 		fmt.Fprintf(w, "shutting down")
-	case "update":
+	case "reboot":
 		args = []string{"reboot", "now"}
 		fmt.Fprintf(w, "rebooting")
 	case "check-updates":
