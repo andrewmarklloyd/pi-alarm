@@ -14,5 +14,7 @@ type Config struct {
 }
 
 type StatusPageData struct {
-	Status string
+	Status        string
+	Version       string
+	LatestVersion string
 }

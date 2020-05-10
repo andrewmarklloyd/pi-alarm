@@ -13,13 +13,13 @@
           <h4 id="subtitle" class="display-4 text-center text-light"></h4>
         </div>
 
-        <div class="col-md col-md-offset-3" style="height: 300px">
-          <button id="arm" class="btn btn-small btn-block btn-success h-100" type="submit" value="ON">
+        <div class="col-md col-md-offset-3">
+          <button id="arm" class="btn btn-small btn-success h-100" type="submit" value="ON">
             <span class="display-2">Arm</span>
           </button>
         </div>
-        <div class="col-md col-md-offset-3" style="height: 300px">
-          <button id="disarm" class="btn btn-small btn-block btn-warning h-100" type="submit" value="ON">
+        <div class="col-md col-md-offset-3">
+          <button id="disarm" class="btn btn-small btn-warning h-100" type="submit" value="ON">
             <span class="display-2">Disarm</span>
           </button>
         </div>
@@ -29,6 +29,21 @@
       </div>
       <div id="armed" class="alert alert-warning">
         <h4 class="alert-heading">System Arming Unknown</h4>
+      </div>
+    </div>
+    <div id="navbar" class="container navbar navbar-fixed-bottom mt-5">
+      <div class="col-md">
+        <button id="shutdown" class="btn btn-warning" type="submit" value="shutdown">
+          <span class="display-4">Shutdown</span>
+        </button>
+      </div>
+      <div class="col-md col-md-offset-1">
+        <button id="reboot" class="btn btn-warning" type="submit" value="reboot">
+          <span class="display-4">Reboot</span>
+        </button>
+      </div>
+      <div class="row mt-5">
+        <span class="display-4">{{.Version}}</span>
       </div>
     </div>
     <form action="/logout" method="post"><input class="btn btn-light btn-sm" type="submit" value="Logout"></form>

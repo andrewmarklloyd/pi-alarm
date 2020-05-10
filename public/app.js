@@ -20,6 +20,32 @@ $(document).ready(function(){
           }
       });
      });
+     $('#shutdown').click(function(e) {
+       res = confirm('Are you sure you want to shutdown?')
+       if (res) {
+         $.ajax({
+             url: '/system',
+             type: 'post',
+             data: '{"operation": "shutdown"}',
+             success :function(response){
+               console.log(response)
+             }
+         });
+       }
+      });
+      $('#reboot').click(function(e) {
+        res = confirm('Are you sure you want to reboot?')
+        if (res) {
+          $.ajax({
+              url: '/system',
+              type: 'post',
+              data: '{"operation": "reboot"}',
+              success :function(response){
+                console.log(response)
+              }
+          });
+        }
+       });
   });
 });
 

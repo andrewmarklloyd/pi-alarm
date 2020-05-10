@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -30,7 +34,6 @@ const (
 	pongWait = 60 * time.Second
 )
 
-var testmode = false
 var upgrader = websocket.Upgrader{}
 
 var config *util.Config
@@ -38,6 +41,11 @@ var gpio gpioLib.GPIO
 var cronLib *cron.Cron
 var messenger notify.Messenger
 var testMessageMode bool = false
+var version []byte
+
+type System struct {
+	Operation string
+}
 
 type Arming struct {
 	Armed bool `json:"armed"`
@@ -94,10 +102,15 @@ func main() {
 	if config.AuthorizedUsers == "" {
 		log.Fatal("Missing Authorized Users")
 	}
+	version, err = ioutil.ReadFile("public/version")
+	if err != nil {
+		log.Println("Unable to open version", err)
+		os.Exit(1)
+	}
 
 	gpio = gpioLib.GPIO{}
 	err = gpio.SetupGPIO(config.Pin)
-	server := web.NewServer(config, statusHandler, websocketHandler)
+	server := web.NewServer(config, statusHandler, websocketHandler, systemHandler)
 	messenger = notify.Messenger{
 		AccountSID: config.TwilioAccountSID,
 		AuthToken:  config.TwilioAuthToken,
@@ -121,6 +134,41 @@ func main() {
 	err = http.ListenAndServe(address, server)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
+	}
+}
+
+func systemHandler(w http.ResponseWriter, req *http.Request) {
+	var system System
+	err := json.NewDecoder(req.Body).Decode(&system)
+	if err != nil {
+		http.Error(w, "Error parsing operation", http.StatusBadRequest)
+		return
+	}
+
+	var args []string = []string{}
+	var command string = ""
+	if system.Operation == "shutdown" {
+		command = "sudo"
+		args = []string{"shutdown", "now"}
+		fmt.Fprintf(w, "shutting down")
+	} else if system.Operation == "reboot" {
+		command = "sudo"
+		args = []string{"reboot", "now"}
+		fmt.Fprintf(w, "rebooting")
+	} else {
+		fmt.Fprintf(w, "command not recognized")
+	}
+	log.Printf("Running command: %s %s\n", command, args)
+	if command != "" && runtime.GOOS != "darwin" {
+		cmd := exec.Command(command, args...)
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err := cmd.Start()
+		if err != nil {
+			log.Println("Failed to initiate command:", err)
+		} else {
+			fmt.Printf("Command output: %q\n", out.String())
+		}
 	}
 }
 
@@ -169,8 +217,16 @@ func sendState(ws *websocket.Conn) error {
 func statusHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
 		tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
+
+		latestVersion, err := ioutil.ReadFile("public/latestVersion")
+		if err != nil || len(latestVersion) == 0 {
+			latestVersion = version
+		}
+
 		data := util.StatusPageData{
-			Status: gpio.CurrentStatus(),
+			Status:        gpio.CurrentStatus(),
+			Version:       string(version),
+			LatestVersion: string(latestVersion),
 		}
 		tmpl.Execute(w, data)
 	} else if req.Method == "POST" {
