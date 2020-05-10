@@ -14,35 +14,21 @@
         </div>
 
         <div class="col-md col-md-offset-3" style="height: 300px">
-          <button id="arm" class="btn btn-large btn-block btn-success h-100" type="submit" value="ON">
+          <button id="arm" class="btn btn-small btn-block btn-success h-100" type="submit" value="ON">
             <span class="display-2">Arm</span>
           </button>
         </div>
         <div class="col-md col-md-offset-3" style="height: 300px">
-          <button id="disarm" class="btn btn-large btn-block btn-warning h-100" type="submit" value="ON">
+          <button id="disarm" class="btn btn-small btn-block btn-warning h-100" type="submit" value="ON">
             <span class="display-2">Disarm</span>
           </button>
         </div>
       </div>
-      <div id="status">
-        {{if eq .Status "OPEN"}}
-          <div class="alert alert-danger">
-            <h4 class="alert-heading">Door OPEN</h4>
-          </div>
-        {{else}}
-          {{if eq .Status "CLOSED"}}
-            <div class="alert alert-success">
-              <h4 class="alert-heading">Door CLOSED</h4>
-            </div>
-          {{else}}
-            <div class="alert alert-warning">
-              <h4 class="alert-heading">Door Status UNKNOWN</h4>
-            </div>
-          {{end}}
-        {{end}}
+      <div id="status" class="alert alert-warning">
+        <h4 class="alert-heading">Door Status Unknown</h4>
       </div>
-      <div id="armed" class="alert alert-success">
-        <h4 class="alert-heading">System Armed</h4>
+      <div id="armed" class="alert alert-warning">
+        <h4 class="alert-heading">System Arming Unknown</h4>
       </div>
     </div>
     <form action="/logout" method="post"><input class="btn btn-light btn-sm" type="submit" value="Logout"></form>

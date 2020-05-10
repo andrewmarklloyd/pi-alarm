@@ -134,6 +134,7 @@ func websocketHandler(w http.ResponseWriter, req *http.Request) {
 
 	defer ws.Close()
 	ws.SetReadLimit(maxMessageSize)
+	sendState(ws)
 	for {
 		_, message, err := ws.ReadMessage()
 		if err != nil {
@@ -146,17 +147,22 @@ func websocketHandler(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 		if event.Message == "ping" {
-			state, err := util.ReadState()
-			if err != nil {
-				log.Println("Error getting armed status: ", err)
-				break
-			}
-			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"armed\",\"value\":%v}", state.Armed)))
-			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"status\",\"value\":\"%v\"}", state.LastKnownStatus)))
+			sendState(ws)
 		} else {
 			log.Println("recv: " + string(message))
 		}
 	}
+}
+
+func sendState(ws *websocket.Conn) error {
+	state, err := util.ReadState()
+	if err != nil {
+		log.Println("Error getting armed status: ", err)
+		return err
+	}
+	ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"armed\",\"value\":%v}", state.Armed)))
+	ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("{\"type\":\"status\",\"value\":\"%v\"}", state.LastKnownStatus)))
+	return nil
 }
 
 // statusHandler shows protected user content.

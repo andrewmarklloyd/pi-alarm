@@ -40,7 +40,26 @@ function armedHandler(armed) {
 }
 
 function statusHandler(status) {
-  // console.log("Status: " + status);
+  switch (status) {
+    case "OPEN":
+      $('#status').html("<h4 class=\"alert-heading\">Door Open</h4>");
+      $('#status').removeClass("alert-warning");
+      $('#status').removeClass("alert-success");
+      $('#status').addClass("alert-danger");
+      break;
+    case "CLOSED":
+      $('#status').html("<h4 class=\"alert-heading\">Door Closed</h4>");
+      $('#status').removeClass("alert-warning");
+      $('#status').removeClass("alert-danger");
+      $('#status').addClass("alert-success");
+      break;
+    case "UNKNOWN":
+    default:
+      $('#status').html("<h4 class=\"alert-heading\">Door Status Unknown</h4>");
+      $('#status').removeClass("alert-success");
+      $('#status').removeClass("alert-danger");
+      $('#status').addClass("alert-warning");
+  }
 }
 
 function setupWebSocket(){

@@ -16,8 +16,8 @@ rm -f ${install_dir}/private/*
 cp ${archive_path}/install/* install/
 cp ${archive_path}/public/* public/
 cp ${archive_path}/private/* private/
-echo -n ${latestVersion} > ${install_dir}/version
-echo -n ${latestVersion} > ${install_dir}/latestVersion
+echo -n ${latestVersion} > ${install_dir}/private/version
+echo -n ${latestVersion} > ${install_dir}/private/latestVersion
 mv ${archive_path}/pi-alarm ./
 rm -rf ${archive_path}
 sudo systemctl restart pi-alarm.service
