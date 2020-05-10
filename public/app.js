@@ -28,12 +28,17 @@ window.addEventListener("load", function(evt) {
 });
 
 function armedHandler(armed) {
-  if (armed) {
+  if (armed === true) {
     $('#armed').html("<h4 class=\"alert-heading\">System Armed</h4>");
     $('#armed').removeClass("alert-warning");
     $('#armed').addClass("alert-success");
-  } else {
+  } else if (armed === false) {
     $('#armed').html("<h4 class=\"alert-heading\">System Disarmed</h4>");
+    $('#armed').removeClass("alert-success");
+    $('#armed').addClass("alert-warning");
+  } else {
+    $('#armed').html("<h4 class=\"alert-heading\">System Arming Unknown</h4>");
+    $('#armed').removeClass("alert-warning");
     $('#armed').removeClass("alert-success");
     $('#armed').addClass("alert-warning");
   }
@@ -69,6 +74,8 @@ function setupWebSocket(){
     this.ws = new WebSocket(`ws://${location.host}/ws`);
   }
   this.ws.onclose = function(){
+    statusHandler("UNKNOWN")
+    armedHandler("UNKNOWN")
     setTimeout(setupWebSocket, 1000);
   }
   this.ws.onopen = function(evt) {
