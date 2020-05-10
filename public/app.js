@@ -46,6 +46,16 @@ $(document).ready(function(){
           });
         }
        });
+       $('#check-updates').click(function(e) {
+         $.ajax({
+             url: '/system',
+             type: 'post',
+             data: '{"operation": "check-updates"}',
+             success :function(response){
+               console.log(response)
+             }
+         });
+        });
   });
 });
 

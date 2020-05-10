@@ -55,6 +55,10 @@ type Event struct {
 	Message string
 }
 
+type AppInfo struct {
+	TagName string `json:"tag_name"`
+}
+
 func main() {
 	const address = "0.0.0.0:8080"
 
@@ -146,20 +150,22 @@ func systemHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var args []string = []string{}
-	var command string = ""
-	if system.Operation == "shutdown" {
-		command = "sudo"
+	command := "sudo"
+	switch system.Operation {
+	case "shutdown":
 		args = []string{"shutdown", "now"}
 		fmt.Fprintf(w, "shutting down")
-	} else if system.Operation == "reboot" {
-		command = "sudo"
+	case "update":
 		args = []string{"reboot", "now"}
 		fmt.Fprintf(w, "rebooting")
-	} else {
+	case "check-updates":
+		checkForUpdates()
+		fmt.Fprintf(w, "checking for updates")
+	default:
 		fmt.Fprintf(w, "command not recognized")
 	}
-	log.Printf("Running command: %s %s\n", command, args)
 	if command != "" && runtime.GOOS != "darwin" {
+		log.Printf("Running command: %s %s\n", command, args)
 		cmd := exec.Command(command, args...)
 		var out bytes.Buffer
 		cmd.Stdout = &out
@@ -168,6 +174,42 @@ func systemHandler(w http.ResponseWriter, req *http.Request) {
 			log.Println("Failed to initiate command:", err)
 		} else {
 			fmt.Printf("Command output: %q\n", out.String())
+		}
+	}
+}
+
+func checkForUpdates() {
+	log.Println("Checking for updates")
+	resp, err := http.Get("https://api.github.com/repos/andrewmarklloyd/pi-alarm/releases/latest")
+	if err != nil {
+		log.Println(err)
+	}
+	var info AppInfo
+	err = json.NewDecoder(resp.Body).Decode(&info)
+	if err != nil {
+		log.Println("Error parsing version:", err)
+	} else {
+		log.Println("Writing latestVersion to file")
+		latestVersion := []byte(info.TagName)
+		err = ioutil.WriteFile("./public/latestVersion", latestVersion, 0644)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		version, err := ioutil.ReadFile("public/version")
+		if err != nil {
+			fmt.Println("unable to open version", err)
+			os.Exit(1)
+		}
+		if info.TagName != string(version) && runtime.GOOS != "darwin" {
+			log.Println("Updating software version")
+			cmd := exec.Command("/home/pi/install/update.sh")
+			var out bytes.Buffer
+			cmd.Stdout = &out
+			err := cmd.Start()
+			if err != nil {
+				log.Println("Failed to initiate command:", err)
+			}
 		}
 	}
 }
