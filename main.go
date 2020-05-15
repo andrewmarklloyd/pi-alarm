@@ -60,7 +60,12 @@ type AppInfo struct {
 }
 
 func main() {
-	const address = "0.0.0.0:8080"
+	var address string
+	if macMode() {
+		address = "localhost:8080"
+	} else {
+		address = "0.0.0.0:8080"
+	}
 
 	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
 	var pinNum int
@@ -164,7 +169,7 @@ func systemHandler(w http.ResponseWriter, req *http.Request) {
 	default:
 		fmt.Fprintf(w, "command not recognized")
 	}
-	if command != "" && runtime.GOOS != "darwin" {
+	if command != "" && !macMode() {
 		log.Printf("Running command: %s %s\n", command, args)
 		cmd := exec.Command(command, args...)
 		var out bytes.Buffer
@@ -201,7 +206,7 @@ func checkForUpdates() {
 			fmt.Println("unable to open version", err)
 			os.Exit(1)
 		}
-		if info.TagName != string(version) && runtime.GOOS != "darwin" {
+		if info.TagName != string(version) && !macMode() {
 			log.Println("Updating software version")
 			cmd := exec.Command("/home/pi/install/update.sh")
 			var out bytes.Buffer
@@ -338,4 +343,8 @@ func isArmed() (bool, error) {
 		return false, err
 	}
 	return state.Armed, nil
+}
+
+func macMode() bool {
+	return runtime.GOOS == "darwin"
 }
