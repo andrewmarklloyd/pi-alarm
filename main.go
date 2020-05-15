@@ -331,8 +331,8 @@ func configureOpenAlert(statusInterval int) {
 			firstReportedOpenTime, _ := time.Parse(time.RFC3339, state.FirstReportedOpenTime)
 			now := time.Now()
 			maxTimeSinceDoorOpened := now.Add(maxDoorOpenedTime)
-			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) {
-				log.Println("door has been open for too long")
+			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) && !state.AlertAcknowledged {
+				log.Println("Door has been open for too long alert")
 				log.Println()
 			}
 		}
