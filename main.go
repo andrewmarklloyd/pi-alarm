@@ -42,6 +42,7 @@ var cronLib *cron.Cron
 var messenger notify.Messenger
 var testMessageMode bool = false
 var version []byte
+var maxDoorOpenedTime time.Duration
 
 type System struct {
 	Operation string
@@ -63,8 +64,10 @@ func main() {
 	var address string
 	if macMode() {
 		address = "localhost:8080"
+		maxDoorOpenedTime = -5 * time.Second
 	} else {
 		address = "0.0.0.0:8080"
+		maxDoorOpenedTime = -5 * time.Minute
 	}
 
 	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
@@ -127,7 +130,7 @@ func main() {
 
 	cronLib = cron.New()
 	configureStateChanged(config.StatusInterval)
-	// configureOpenAlert(config.StatusInterval)
+	configureOpenAlert(config.StatusInterval)
 	cronLib.Start()
 
 	c := make(chan os.Signal)
@@ -304,6 +307,13 @@ func configureStateChanged(statusInterval int) {
 					log.Println(fmt.Sprintf("State changed, current state: %s", state.LastKnownStatus))
 				}
 			}
+			if state.LastKnownStatus == "CLOSED" && currentStatus == "OPEN" {
+				state.FirstReportedOpenTime = time.Now().Format(time.RFC3339)
+			} else if state.LastKnownStatus == "OPEN" && currentStatus == "OPEN" {
+				// intentionally do nothing
+			} else {
+				state.FirstReportedOpenTime = ""
+			}
 			state.LastKnownStatus = currentStatus
 			util.WriteState(state)
 		}
@@ -317,11 +327,13 @@ func configureOpenAlert(statusInterval int) {
 			log.Println(fmt.Sprintf("Error getting armed status: %s", err))
 			return
 		}
-		if state.LastKnownStatus == "OPEN" && state.Armed {
-			if testMessageMode {
-				log.Printf("Alert, door is %s ", state.LastKnownStatus)
-			} else {
-				messenger.SendMessage(fmt.Sprintf("Alert, door is %s", state.LastKnownStatus))
+		if state.FirstReportedOpenTime != "" {
+			firstReportedOpenTime, _ := time.Parse(time.RFC3339, state.FirstReportedOpenTime)
+			now := time.Now()
+			maxTimeSinceDoorOpened := now.Add(maxDoorOpenedTime)
+			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) {
+				log.Println("door has been open for too long")
+				log.Println()
 			}
 		}
 	})
