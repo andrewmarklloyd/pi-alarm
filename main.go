@@ -32,6 +32,7 @@ const (
 	maxMessageSize = 8192
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
+	OPEN     = "OPEN"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -46,6 +47,10 @@ var maxDoorOpenedTime time.Duration
 
 type System struct {
 	Operation string
+}
+
+type AckEvent struct {
+	Ack bool `json:"ack"`
 }
 
 type Arming struct {
@@ -64,10 +69,10 @@ func main() {
 	var address string
 	if macMode() {
 		address = "localhost:8080"
-		maxDoorOpenedTime = -5 * time.Second
+		maxDoorOpenedTime = 5 * time.Second
 	} else {
 		address = "0.0.0.0:8080"
-		maxDoorOpenedTime = -5 * time.Minute
+		maxDoorOpenedTime = 5 * time.Minute
 	}
 
 	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
@@ -122,7 +127,7 @@ func main() {
 
 	gpio = gpioLib.GPIO{}
 	err = gpio.SetupGPIO(config.Pin)
-	server := web.NewServer(config, statusHandler, websocketHandler, systemHandler)
+	server := web.NewServer(config, statusHandler, websocketHandler, systemHandler, ackHandler)
 	messenger = notify.Messenger{
 		AccountSID: config.TwilioAccountSID,
 		AuthToken:  config.TwilioAuthToken,
@@ -184,6 +189,17 @@ func systemHandler(w http.ResponseWriter, req *http.Request) {
 			fmt.Printf("Command output: %q\n", out.String())
 		}
 	}
+}
+
+func ackHandler(w http.ResponseWriter, req *http.Request) {
+	var ack AckEvent
+	err := json.NewDecoder(req.Body).Decode(&ack)
+	if err != nil {
+		http.Error(w, "Error parsing operation", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Fprintf(w, "ack")
 }
 
 func checkForUpdates() {
@@ -307,9 +323,9 @@ func configureStateChanged(statusInterval int) {
 					log.Println(fmt.Sprintf("State changed, current state: %s", state.LastKnownStatus))
 				}
 			}
-			if state.LastKnownStatus == "CLOSED" && currentStatus == "OPEN" {
+			if state.LastKnownStatus == "CLOSED" && currentStatus == OPEN {
 				state.FirstReportedOpenTime = time.Now().Format(time.RFC3339)
-			} else if state.LastKnownStatus == "OPEN" && currentStatus == "OPEN" {
+			} else if state.LastKnownStatus == OPEN && currentStatus == OPEN {
 				// intentionally do nothing
 			} else {
 				state.FirstReportedOpenTime = ""
@@ -330,9 +346,9 @@ func configureOpenAlert(statusInterval int) {
 		if state.FirstReportedOpenTime != "" {
 			firstReportedOpenTime, _ := time.Parse(time.RFC3339, state.FirstReportedOpenTime)
 			now := time.Now()
-			maxTimeSinceDoorOpened := now.Add(maxDoorOpenedTime)
+			maxTimeSinceDoorOpened := now.Add(-maxDoorOpenedTime)
 			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) && !state.AlertAcknowledged {
-				log.Println("Door has been open for too long alert")
+				log.Println(fmt.Sprintf("Door opened for longer than %s", maxDoorOpenedTime))
 				log.Println()
 			}
 		}
