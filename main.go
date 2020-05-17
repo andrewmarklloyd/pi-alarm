@@ -348,8 +348,12 @@ func configureOpenAlert(statusInterval int) {
 			now := time.Now()
 			maxTimeSinceDoorOpened := now.Add(-maxDoorOpenedTime)
 			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) && !state.AlertAcknowledged {
-				log.Println(fmt.Sprintf("Door opened for longer than %s", maxDoorOpenedTime))
-				log.Println()
+				message := fmt.Sprintf("Door opened for longer than %s", maxDoorOpenedTime)
+				if testMessageMode {
+					log.Println(message)
+				} else {
+					messenger.SendMessage(message)
+				}
 			}
 		}
 	})
