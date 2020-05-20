@@ -12,6 +12,7 @@ type stateConfig struct {
 	Armed                 bool   `yaml:"armed"`
 	FirstReportedOpenTime string `yaml:"firstReportedOpenTime"`
 	AlertAcknowledged     bool   `yaml:"alertAcknowledged"`
+	AlertNotified         bool   `yaml:"alertNotified"`
 }
 
 func ReadState() (stateConfig, error) {

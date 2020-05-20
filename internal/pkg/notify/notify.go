@@ -13,6 +13,10 @@ type Messenger struct {
 	AuthToken  string
 }
 
+type NotifyEvent struct {
+	AlertNotified bool `json:"alertNotifed"`
+}
+
 func (m Messenger) SendMessage(body string) {
 	urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + m.AccountSID + "/Messages.json"
 

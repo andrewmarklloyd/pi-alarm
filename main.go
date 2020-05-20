@@ -49,10 +49,6 @@ type System struct {
 	Operation string
 }
 
-type AckEvent struct {
-	Ack bool `json:"ack"`
-}
-
 type Arming struct {
 	Armed bool `json:"armed"`
 }
@@ -127,7 +123,7 @@ func main() {
 
 	gpio = gpioLib.GPIO{}
 	err = gpio.SetupGPIO(config.Pin)
-	server := web.NewServer(config, statusHandler, websocketHandler, systemHandler, ackHandler)
+	server := web.NewServer(config, statusHandler, websocketHandler, systemHandler, alertNotifyHandler)
 	messenger = notify.Messenger{
 		AccountSID: config.TwilioAccountSID,
 		AuthToken:  config.TwilioAuthToken,
@@ -191,15 +187,15 @@ func systemHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func ackHandler(w http.ResponseWriter, req *http.Request) {
-	var ack AckEvent
-	err := json.NewDecoder(req.Body).Decode(&ack)
+func alertNotifyHandler(w http.ResponseWriter, req *http.Request) {
+	var n notify.NotifyEvent
+	err := json.NewDecoder(req.Body).Decode(&n)
 	if err != nil {
 		http.Error(w, "Error parsing operation", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Fprintf(w, "ack")
+	fmt.Fprintf(w, "ok")
 }
 
 func checkForUpdates() {
@@ -347,8 +343,10 @@ func configureOpenAlert(statusInterval int) {
 			firstReportedOpenTime, _ := time.Parse(time.RFC3339, state.FirstReportedOpenTime)
 			now := time.Now()
 			maxTimeSinceDoorOpened := now.Add(-maxDoorOpenedTime)
-			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) && !state.AlertAcknowledged {
+			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) && !state.AlertNotified {
 				message := fmt.Sprintf("Door opened for longer than %s", maxDoorOpenedTime)
+				state.AlertNotified = true
+				util.WriteState(state)
 				if testMessageMode {
 					log.Println(message)
 				} else {
