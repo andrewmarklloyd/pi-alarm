@@ -27,13 +27,13 @@ import (
 const (
 	defaultPin             = 18
 	defaultIntervalSeconds = 10
-	PRIVATE_DIR            = "/private/"
+	privateDir             = "/private/"
 	// Maximum message size allowed from peer.
 	maxMessageSize = 8192
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
-	OPEN     = "OPEN"
-	CLOSED   = "CLOSED"
+	open     = "OPEN"
+	closed   = "CLOSED"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -42,7 +42,7 @@ var config *util.Config
 var gpio gpioLib.GPIO
 var cronLib *cron.Cron
 var messenger notify.Messenger
-var testMessageMode bool = false
+var testMessageMode = false
 var version []byte
 var maxDoorOpenedTime time.Duration
 
@@ -159,7 +159,7 @@ func systemHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var args []string = []string{}
+	var args = []string{}
 	command := "sudo"
 	switch system.Operation {
 	case "shutdown":
@@ -279,7 +279,7 @@ func sendState(ws *websocket.Conn) error {
 // statusHandler shows protected user content.
 func statusHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
-		tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", PRIVATE_DIR)))
+		tmpl := template.Must(template.ParseFiles(fmt.Sprintf(".%sstatus.html", privateDir)))
 
 		latestVersion, err := ioutil.ReadFile("public/latestVersion")
 		if err != nil || len(latestVersion) == 0 {
@@ -313,13 +313,13 @@ func configureStateChanged(statusInterval int) {
 			log.Println("Error reading state file: ", err)
 		} else {
 			currentStatus := gpio.CurrentStatus()
-			if state.LastKnownStatus == CLOSED && currentStatus == OPEN {
+			if state.LastKnownStatus == closed && currentStatus == open {
 				state.FirstReportedOpenTime = time.Now().Format(time.RFC3339)
 				log.Println(fmt.Sprintf("State changed, current state: %s", currentStatus))
 				if !testMessageMode && state.Armed {
 					messenger.SendMessage(fmt.Sprintf("Door is %s", currentStatus))
 				}
-			} else if state.LastKnownStatus == OPEN && currentStatus == CLOSED {
+			} else if state.LastKnownStatus == open && currentStatus == closed {
 				state.AlertNotified = false
 				state.FirstReportedOpenTime = ""
 			} else {
