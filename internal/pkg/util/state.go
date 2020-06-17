@@ -11,7 +11,6 @@ type stateConfig struct {
 	LastKnownStatus       string `yaml:"lastKnownStatus"`
 	Armed                 bool   `yaml:"armed"`
 	FirstReportedOpenTime string `yaml:"firstReportedOpenTime"`
-	AlertAcknowledged     bool   `yaml:"alertAcknowledged"`
 	AlertNotified         bool   `yaml:"alertNotified"`
 }
 

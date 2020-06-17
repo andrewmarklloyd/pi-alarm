@@ -33,6 +33,7 @@ const (
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
 	OPEN     = "OPEN"
+	CLOSED   = "CLOSED"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -312,19 +313,17 @@ func configureStateChanged(statusInterval int) {
 			log.Println("Error reading state file: ", err)
 		} else {
 			currentStatus := gpio.CurrentStatus()
-			if state.LastKnownStatus != currentStatus && state.Armed {
-				if !testMessageMode {
-					messenger.SendMessage(fmt.Sprintf("Door is %s", currentStatus))
-				} else {
-					log.Println(fmt.Sprintf("State changed, current state: %s", state.LastKnownStatus))
-				}
-			}
-			if state.LastKnownStatus == "CLOSED" && currentStatus == OPEN {
+			if state.LastKnownStatus == CLOSED && currentStatus == OPEN {
 				state.FirstReportedOpenTime = time.Now().Format(time.RFC3339)
-			} else if state.LastKnownStatus == OPEN && currentStatus == OPEN {
-				// intentionally do nothing
-			} else {
+				log.Println(fmt.Sprintf("State changed, current state: %s", currentStatus))
+				if !testMessageMode && state.Armed {
+					messenger.SendMessage(fmt.Sprintf("Door is %s", currentStatus))
+				}
+			} else if state.LastKnownStatus == OPEN && currentStatus == CLOSED {
+				state.AlertNotified = false
 				state.FirstReportedOpenTime = ""
+			} else {
+				// intentionally do nothing
 			}
 			state.LastKnownStatus = currentStatus
 			util.WriteState(state)
@@ -345,13 +344,13 @@ func configureOpenAlert(statusInterval int) {
 			maxTimeSinceDoorOpened := now.Add(-maxDoorOpenedTime)
 			if firstReportedOpenTime.Before(maxTimeSinceDoorOpened) && !state.AlertNotified {
 				message := fmt.Sprintf("Door opened for longer than %s", maxDoorOpenedTime)
-				state.AlertNotified = true
-				util.WriteState(state)
 				if testMessageMode {
 					log.Println(message)
 				} else {
 					messenger.SendMessage(message)
 				}
+				state.AlertNotified = true
+				util.WriteState(state)
 			}
 		}
 	})
