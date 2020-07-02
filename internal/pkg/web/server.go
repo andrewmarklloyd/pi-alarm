@@ -16,34 +16,33 @@ import (
 )
 
 const (
-	sessionName     = "pi-alarm"
-	sessionSecret   = "example cookie signing secret"
-	sessionUserKey  = "googleID"
-	defaultPin      = 18
-	PUBLIC_DIR      = "/public/"
-	PRIVATE_DIR     = "/private/"
-	STATUS_ENDPOINT = "/status"
-	POST            = "POST"
+	sessionName    = "pi-alarm"
+	sessionUserKey = "googleID"
+	defaultPin     = 18
+	publicDir      = "/public/"
+	statusEndpoint = "/status"
+	post           = "post"
 )
 
 var config *util.Config
 
 // sessionStore encodes and decodes session data stored in signed cookies
-var sessionStore = sessions.NewCookieStore([]byte(sessionSecret), nil)
+var sessionStore *sessions.CookieStore
 
-// New returns a new ServeMux with app routes.
+// NewServer returns a new ServeMux with app routes.
 func NewServer(utilConfig *util.Config, statusHandler http.HandlerFunc, websocketHandler http.HandlerFunc, systemHandler http.HandlerFunc, alertNotifyHandler http.HandlerFunc) *gmux.Router {
 	config = utilConfig
+	sessionStore = sessions.NewCookieStore([]byte(config.SessionSecret), nil)
 	router := gmux.NewRouter().StrictSlash(true)
 	router.
-		PathPrefix(PUBLIC_DIR).
-		Handler(http.StripPrefix(PUBLIC_DIR, http.FileServer(http.Dir("."+PUBLIC_DIR))))
+		PathPrefix(publicDir).
+		Handler(http.StripPrefix(publicDir, http.FileServer(http.Dir("."+publicDir))))
 
 	router.HandleFunc("/", welcomeHandler)
-	router.Handle(STATUS_ENDPOINT, requireLogin(http.HandlerFunc(statusHandler))).Methods("GET", POST)
+	router.Handle(statusEndpoint, requireLogin(http.HandlerFunc(statusHandler))).Methods("GET", post)
 	router.Handle("/ws", requireLogin(http.HandlerFunc(websocketHandler)))
-	router.Handle("/system", requireLogin(http.HandlerFunc(systemHandler))).Methods(POST)
-	router.Handle("/notify", requireLogin(http.HandlerFunc(alertNotifyHandler))).Methods(POST)
+	router.Handle("/system", requireLogin(http.HandlerFunc(systemHandler))).Methods(post)
+	router.Handle("/notify", requireLogin(http.HandlerFunc(alertNotifyHandler))).Methods(post)
 	router.HandleFunc("/logout", logoutHandler)
 
 	// 1. Register Login and Callback handlers
@@ -71,14 +70,14 @@ func issueSession() http.Handler {
 			return
 		}
 		if !strings.Contains(config.AuthorizedUsers, googleUser.Email) {
-			http.Redirect(w, req, fmt.Sprintf("%serror.html", PUBLIC_DIR), http.StatusFound)
+			http.Redirect(w, req, fmt.Sprintf("%serror.html", publicDir), http.StatusFound)
 			return
 		}
 		// 2. Implement a success handler to issue some form of session
 		session := sessionStore.New(sessionName)
 		session.Values[sessionUserKey] = googleUser.Id
 		session.Save(w)
-		http.Redirect(w, req, STATUS_ENDPOINT, http.StatusFound)
+		http.Redirect(w, req, statusEndpoint, http.StatusFound)
 	}
 	return http.HandlerFunc(fn)
 }
@@ -90,17 +89,17 @@ func welcomeHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if isAuthenticated(req) {
-		http.Redirect(w, req, STATUS_ENDPOINT, http.StatusFound)
+		http.Redirect(w, req, statusEndpoint, http.StatusFound)
 		return
 	}
 
-	page, _ := ioutil.ReadFile(fmt.Sprintf(".%sindex.html", PUBLIC_DIR))
+	page, _ := ioutil.ReadFile(fmt.Sprintf(".%sindex.html", publicDir))
 	fmt.Fprintf(w, string(page))
 }
 
-// logoutHandler destroys the session on POSTs and redirects to home.
+// logoutHandler destroys the session on posts and redirects to home.
 func logoutHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method == "POST" {
+	if req.Method == post {
 		sessionStore.Destroy(w, sessionName)
 	}
 	http.Redirect(w, req, "/", http.StatusFound)

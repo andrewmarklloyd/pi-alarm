@@ -9,12 +9,15 @@ configure_app() {
   read -s REDIRECT_URL
   echo "Enter the AUTHORIZED_USERS as a comma separated list:"
   read -s AUTHORIZED_USERS
+  echo "Enter the SESSION_SECRET:"
+  read -s SESSION_SECRET
 
   # / as a delimter fails on REDIRECT_URL, using ~ instead
   sed "s~{{.GOOGLE_CLIENT_ID}}~${GOOGLE_CLIENT_ID}~" ${archive_path}/install/pi-alarm.service.tmpl \
        | sed "s~{{.GOOGLE_CLIENT_SECRET}}~${GOOGLE_CLIENT_SECRET}~" \
        | sed "s~{{.REDIRECT_URL}}~${REDIRECT_URL}~" \
-       | sed "s~{{.AUTHORIZED_USERS}}~${AUTHORIZED_USERS}~" > ${archive_path}/install/pi-alarm.service
+       | sed "s~{{.AUTHORIZED_USERS}}~${AUTHORIZED_USERS}~"
+       | sed "s~{{.SESSION_SECRET}}~${SESSION_SECRET}~" > ${archive_path}/install/pi-alarm.service
 
   sudo mv ${archive_path}/install/pi-alarm.service /etc/systemd/system/
   rm ${archive_path}/install/pi-alarm.service.tmpl

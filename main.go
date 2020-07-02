@@ -95,6 +95,7 @@ func main() {
 		Debug:            debug,
 		TwilioAccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
 		TwilioAuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+		SessionSecret:    os.Getenv("SESSION_SECRET"),
 	}
 
 	if config.ClientID == "" {
@@ -115,6 +116,9 @@ func main() {
 	}
 	if config.AuthorizedUsers == "" {
 		log.Fatal("Missing Authorized Users")
+	}
+	if config.SessionSecret == "" {
+		log.Fatal("Missing Session Secret")
 	}
 	version, err = ioutil.ReadFile("public/version")
 	if err != nil {
