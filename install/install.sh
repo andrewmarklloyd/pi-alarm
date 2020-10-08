@@ -16,7 +16,7 @@ configure_app() {
   sed "s~{{.GOOGLE_CLIENT_ID}}~${GOOGLE_CLIENT_ID}~" ${archive_path}/install/pi-alarm.service.tmpl \
        | sed "s~{{.GOOGLE_CLIENT_SECRET}}~${GOOGLE_CLIENT_SECRET}~" \
        | sed "s~{{.REDIRECT_URL}}~${REDIRECT_URL}~" \
-       | sed "s~{{.AUTHORIZED_USERS}}~${AUTHORIZED_USERS}~"
+       | sed "s~{{.AUTHORIZED_USERS}}~${AUTHORIZED_USERS}~" \
        | sed "s~{{.SESSION_SECRET}}~${SESSION_SECRET}~" > ${archive_path}/install/pi-alarm.service
 
   sudo mv ${archive_path}/install/pi-alarm.service /etc/systemd/system/
