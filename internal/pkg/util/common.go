@@ -11,6 +11,8 @@ type Config struct {
 	StatusInterval   int
 	TwilioAccountSID string
 	TwilioAuthToken  string
+	TwilioTo         string
+	TwilioFrom       string
 	SessionSecret    string
 }
 

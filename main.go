@@ -95,6 +95,8 @@ func main() {
 		Debug:            debug,
 		TwilioAccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
 		TwilioAuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+		TwilioTo:         os.Getenv("TWILIO_TO"),
+		TwilioFrom:       os.Getenv("TWILIO_FROM"),
 		SessionSecret:    os.Getenv("SESSION_SECRET"),
 	}
 
@@ -132,6 +134,8 @@ func main() {
 	messenger = notify.Messenger{
 		AccountSID: config.TwilioAccountSID,
 		AuthToken:  config.TwilioAuthToken,
+		To:         config.TwilioTo,
+		From:       config.TwilioFrom,
 	}
 
 	cronLib = cron.New()

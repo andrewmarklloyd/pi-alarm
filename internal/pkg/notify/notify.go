@@ -11,6 +11,8 @@ import (
 type Messenger struct {
 	AccountSID string
 	AuthToken  string
+	To         string
+	From       string
 }
 
 type NotifyEvent struct {
@@ -22,8 +24,8 @@ func (m Messenger) SendMessage(body string) {
 
 	// Pack up the data for our message
 	msgData := url.Values{}
-	msgData.Set("To", "+12534484393")
-	msgData.Set("From", "+12025190922")
+	msgData.Set("To", m.To)
+	msgData.Set("From", m.From)
 	msgData.Set("Body", body)
 	msgDataReader := *strings.NewReader(msgData.Encode())
 
