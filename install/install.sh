@@ -1,33 +1,10 @@
 #!/bin/bash
 
-configure_app() {
-  echo "Enter the GOOGLE_CLIENT_ID:"
-  read -s GOOGLE_CLIENT_ID
-  echo "Enter the GOOGLE_CLIENT_SECRET:"
-  read -s GOOGLE_CLIENT_SECRET
-  echo "Enter the REDIRECT_URL:"
-  read -s REDIRECT_URL
-  echo "Enter the AUTHORIZED_USERS as a comma separated list:"
-  read -s AUTHORIZED_USERS
-  echo "Enter the SESSION_SECRET:"
-  read -s SESSION_SECRET
-
-  # / as a delimter fails on REDIRECT_URL, using ~ instead
-  sed "s~{{.GOOGLE_CLIENT_ID}}~${GOOGLE_CLIENT_ID}~" ${archive_path}/install/pi-alarm.service.tmpl \
-       | sed "s~{{.GOOGLE_CLIENT_SECRET}}~${GOOGLE_CLIENT_SECRET}~" \
-       | sed "s~{{.REDIRECT_URL}}~${REDIRECT_URL}~" \
-       | sed "s~{{.AUTHORIZED_USERS}}~${AUTHORIZED_USERS}~" \
-       | sed "s~{{.SESSION_SECRET}}~${SESSION_SECRET}~" > ${archive_path}/install/pi-alarm.service
-
-  sudo mv ${archive_path}/install/pi-alarm.service /etc/systemd/system/
-  rm ${archive_path}/install/pi-alarm.service.tmpl
-}
-
 install_pagekite() {
   curl -s -O https://pagekite.net/pk/pagekite.py
   chmod +x pagekite.py
   sudo mv pagekite.py /usr/local/bin/pagekite.py
-  echo "Enter the pagekite name:"
+  echo "Enter the pagekite name, for example 'my-kite.pagekite.me"
   read PAGE_KITE
   sed "s/{{.PAGE_KITE}}/${PAGE_KITE}/" ${archive_path}/install/pagekite.service.tmpl > ${archive_path}/install/pagekite.service
   sudo mv ${archive_path}/install/pagekite.service /etc/systemd/system/
@@ -62,7 +39,28 @@ cp ${archive_path}/private/* ${install_dir}/private/
 echo -n ${latestVersion} > ${install_dir}/public/version
 echo -n ${latestVersion} > ${install_dir}/public/latestVersion
 mv ${archive_path}/pi-alarm ${install_dir}/
-configure_app
+
+# Configure Heroku to get secrets
+echo "Enter the Heroku app name that contains the configuration secrets:"
+read -r HEROKU_APP
+echo "Enter the Heroku API key to configure the app:"
+read -s HEROKU_API_KEY
+
+tokenCheckError=$(curl -s -n https://api.heroku.com/apps/${HEROKU_APP}/config-vars \
+  -H "Accept: application/vnd.heroku+json; version=3" \
+  -H "Authorization: Bearer ${READ_PROTECTED_TOKEN}" | jq -r '.id')
+if [[ ${tokenCheckError} != "null" ]]; then
+  echo "Unable to authenticate with Heroku, received error '${tokenCheckError}'. Exiting now"
+  exit 1
+fi
+
+# use ~ as a delimiter
+sed "s~{{.HEROKU_APP}}~${HEROKU_APP}~" ${archive_path}/install/pi-alarm.service.tmpl \
+  | sed "s~{{.HEROKU_API_KEY}}~${HEROKU_API_KEY}~" \
+  > ${archive_path}/install/pi-alarm.service
+
+sudo mv ${archive_path}/install/pi-alarm.service /etc/systemd/system/
+rm ${archive_path}/install/pi-alarm.service.tmpl
 
 install_pagekite
 
