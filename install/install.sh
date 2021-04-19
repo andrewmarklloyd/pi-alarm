@@ -39,6 +39,7 @@ cp ${archive_path}/private/* ${install_dir}/private/
 echo -n ${latestVersion} > ${install_dir}/public/version
 echo -n ${latestVersion} > ${install_dir}/public/latestVersion
 mv ${archive_path}/pi-alarm ${install_dir}/
+touch /home/pi/state.yml
 
 # Configure Heroku to get secrets
 echo "Enter the Heroku app name that contains the configuration secrets:"
