@@ -48,7 +48,7 @@ read -s HEROKU_API_KEY
 
 tokenCheckError=$(curl -s -n https://api.heroku.com/apps/${HEROKU_APP}/config-vars \
   -H "Accept: application/vnd.heroku+json; version=3" \
-  -H "Authorization: Bearer ${READ_PROTECTED_TOKEN}" | jq -r '.id')
+  -H "Authorization: Bearer ${HEROKU_API_KEY}" | jq -r '.id')
 if [[ ${tokenCheckError} != "null" ]]; then
   echo "Unable to authenticate with Heroku, received error '${tokenCheckError}'. Exiting now"
   exit 1
